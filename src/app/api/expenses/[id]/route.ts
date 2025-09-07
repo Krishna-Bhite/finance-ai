@@ -1,4 +1,3 @@
-// src/app/api/expenses/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
@@ -30,13 +29,9 @@ export async function GET(req: Request) {
     return NextResponse.json([], { status: 200 });
   }
 
-  // ✅ Type-safe Prisma filter
   const where: {
     userId: string;
-    createdAt?: {
-      gte: Date;
-      lte: Date;
-    };
+    createdAt?: { gte: Date; lte: Date };
   } = { userId: user.id };
 
   if (start && end) {
@@ -61,7 +56,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // ✅ Strongly type request body
   const body: ExpenseInput = await req.json();
   const { amount, category, description } = body;
 
@@ -83,4 +77,35 @@ export async function POST(req: Request) {
   });
 
   return NextResponse.json(expense);
+}
+
+// ✅ PATCH (edit/update expense by ID)
+export async function PATCH(req: Request, context: any) {
+  const { id } = context.params as { id: string };
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const body: Partial<ExpenseInput> = await req.json();
+
+  const updated = await prisma.expense.update({
+    where: { id },
+    data: body,
+  });
+
+  return NextResponse.json(updated);
+}
+
+// ✅ DELETE expense by ID
+export async function DELETE(req: Request, context: any) {
+  const { id } = context.params as { id: string };
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  await prisma.expense.delete({ where: { id } });
+
+  return NextResponse.json({ success: true });
 }
