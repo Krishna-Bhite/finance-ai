@@ -46,7 +46,7 @@ export async function POST(req: Request) {
   if (!session?.user?.email) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-
+   
   const body = await req.json();
   const { amount, category, description } = body;
 

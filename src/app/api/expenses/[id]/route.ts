@@ -1,40 +1,86 @@
-// src/app/api/expenses/[id]/route.ts
+// src/app/api/expenses/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "../../auth/[...nextauth]/options";
+import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import prisma from "@/lib/prisma";
 
-// PATCH update expense
-export async function PATCH(req: Request, context: { params: Promise<{ id: string }> }) {
-  const { params } = context;
-  const { id } = await params;
+// Define Expense input type (for POST body)
+interface ExpenseInput {
+  amount: number;
+  category: string;
+  description?: string;
+}
 
+// ✅ GET all expenses for logged-in user (with optional date range filters)
+export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await req.json();
+  const { searchParams } = new URL(req.url);
+  const start = searchParams.get("start");
+  const end = searchParams.get("end");
+
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email },
+  });
+
+  if (!user) {
+    return NextResponse.json([], { status: 200 });
+  }
+
+  // ✅ Type-safe Prisma filter
+  const where: {
+    userId: string;
+    createdAt?: {
+      gte: Date;
+      lte: Date;
+    };
+  } = { userId: user.id };
+
+  if (start && end) {
+    where.createdAt = {
+      gte: new Date(start),
+      lte: new Date(end),
+    };
+  }
+
+  const expenses = await prisma.expense.findMany({
+    where,
+    orderBy: { createdAt: "asc" },
+  });
+
+  return NextResponse.json(expenses);
+}
+
+// ✅ POST create new expense
+export async function POST(req: Request) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // ✅ Strongly type request body
+  const body: ExpenseInput = await req.json();
   const { amount, category, description } = body;
 
-  const expense = await prisma.expense.update({
-    where: { id },
-    data: { amount, category, description },
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email },
+  });
+
+  if (!user) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+
+  const expense = await prisma.expense.create({
+    data: {
+      userId: user.id,
+      amount,
+      category,
+      description,
+    },
   });
 
   return NextResponse.json(expense);
-}
-
-// DELETE expense
-export async function DELETE(req: Request, context: { params: Promise<{ id: string }> }) {
-  const { params } = context;
-  const { id } = await params;
-
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  await prisma.expense.delete({ where: { id } });
-  return NextResponse.json({ success: true });
 }

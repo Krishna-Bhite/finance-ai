@@ -1,15 +1,42 @@
 // src/app/api/insights/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "../auth/[...nextauth]/options";
-import  prisma  from "@/lib/prisma";
+import { authOptions } from "@/app/api/auth/[...nextauth]/options";
+import prisma from "@/lib/prisma";
 
 const PROVIDER = process.env.LLM_PROVIDER || "";
 const GROQ_API_KEY = process.env.GROQ_API_KEY || "";
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
 
+// 🔑 Types for analytics
+interface CategoryStat {
+  category: string;
+  total: number;
+}
+interface CashflowStat {
+  date: string;
+  total: number;
+}
+interface Anomaly {
+  id: string;
+  amount: number;
+  category: string;
+  description: string | null;
+  createdAt: Date;
+  z: number;
+}
+interface Analytics {
+  range: { start: Date; end: Date };
+  total: number;
+  count: number;
+  avg: number;
+  byCategory: CategoryStat[];
+  cashflow: CashflowStat[];
+  anomalies: Anomaly[];
+}
+
 // 🔄 Shared function: build analytics (same as /api/analytics)
-async function buildAnalytics(userId: string, start: Date, end: Date) {
+async function buildAnalytics(userId: string, start: Date, end: Date): Promise<Analytics> {
   const expenses = await prisma.expense.findMany({
     where: { userId, createdAt: { gte: start, lte: end } },
     orderBy: { createdAt: "asc" },
@@ -23,16 +50,16 @@ async function buildAnalytics(userId: string, start: Date, end: Date) {
   for (const e of expenses) {
     categoryMap.set(e.category, (categoryMap.get(e.category) || 0) + e.amount);
   }
-  const byCategory = Array.from(categoryMap, ([category, total]) => ({ category, total }));
+  const byCategory: CategoryStat[] = Array.from(categoryMap, ([category, total]) => ({ category, total }));
 
   const dailyMap = new Map<string, number>();
   for (const e of expenses) {
     const day = e.createdAt.toISOString().slice(0, 10);
     dailyMap.set(day, (dailyMap.get(day) || 0) + e.amount);
   }
-  const cashflow = Array.from(dailyMap, ([date, total]) => ({ date, total }));
+  const cashflow: CashflowStat[] = Array.from(dailyMap, ([date, total]) => ({ date, total }));
 
-  const anomalies = avg > 0
+  const anomalies: Anomaly[] = avg > 0
     ? expenses.filter(e => e.amount > avg * 2).map(e => ({
         id: e.id,
         amount: e.amount,
@@ -47,7 +74,7 @@ async function buildAnalytics(userId: string, start: Date, end: Date) {
 }
 
 // 🔮 Ask LLM (Groq or OpenAI)
-async function summarizeWithLLM(analytics: any) {
+async function summarizeWithLLM(analytics: Analytics): Promise<string> {
   const prompt = `
 You are a finance assistant. Using this JSON analytics, write:
 1) A short spending summary in plain English
@@ -97,13 +124,14 @@ ${JSON.stringify(analytics, null, 2)}
   return `No AI key configured.
 Quick summary: Total spend $${analytics.total.toFixed(2)}, 
 Top categories: ${
-  analytics.byCategory && analytics.byCategory.length > 0
-    ? analytics.byCategory
-        .slice(0, 3)
-        .map((c: { category: string; total: number }) => `${c.category} $${c.total}`)
-        .join(", ")
-    : "N/A"
-}`; }
+    analytics.byCategory && analytics.byCategory.length > 0
+      ? analytics.byCategory
+          .slice(0, 3)
+          .map(c => `${c.category} $${c.total}`)
+          .join(", ")
+      : "N/A"
+  }`;
+}
 
 // ✅ GET: AI Insights
 export async function GET(req: NextRequest) {
