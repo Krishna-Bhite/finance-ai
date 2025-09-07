@@ -1,5 +1,5 @@
 @import "tailwindcss";
-
+/* https://aniq-ui-template2.vercel.app/ */
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -24,3 +24,35 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+.custom-calendar {
+  background: transparent !important;
+  border: none !important;
+  color: #fff;
+  font-family: inherit;
+}
+
+.custom-calendar button {
+  background: transparent;
+  color: #e5e7eb;
+  border-radius: 0.5rem;
+  padding: 0.3rem 0.6rem;
+  transition: all 0.2s ease;
+}
+
+.custom-calendar button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #06b6d4;
+}
+
+.custom-calendar .react-calendar__tile--active {
+  background: #06b6d4 !important;
+  color: black !important;
+  border-radius: 0.5rem;
+  font-weight: bold;
+}
+
+.custom-calendar .react-calendar__tile--now {
+  border: 1px solid #facc15;
+  border-radius: 0.5rem;
+}
+
