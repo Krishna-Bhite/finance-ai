@@ -3,18 +3,17 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import prisma from "@/lib/prisma";
 
-// GET single budget
-export async function GET(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
+// ✅ GET single budget
+export async function GET(req: Request, context: any) {
+  const { id } = context.params as { id: string };
+
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const budget = await prisma.budget.findUnique({
-    where: { id: params.id },
+    where: { id },
   });
 
   if (!budget) {
@@ -24,11 +23,10 @@ export async function GET(
   return NextResponse.json(budget);
 }
 
-// PATCH (update budget)
-export async function PATCH(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
+// ✅ PATCH (update budget)
+export async function PATCH(req: Request, context: any) {
+  const { id } = context.params as { id: string };
+
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -38,7 +36,7 @@ export async function PATCH(
   const { amount, startDate, endDate } = body;
 
   const updated = await prisma.budget.update({
-    where: { id: params.id },
+    where: { id },
     data: {
       amount: parseFloat(amount),
       startDate: new Date(startDate),
@@ -49,18 +47,17 @@ export async function PATCH(
   return NextResponse.json(updated);
 }
 
-// DELETE budget
-export async function DELETE(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
+// ✅ DELETE budget
+export async function DELETE(req: Request, context: any) {
+  const { id } = context.params as { id: string };
+
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   await prisma.budget.delete({
-    where: { id: params.id },
+    where: { id },
   });
 
   return NextResponse.json({ success: true });
