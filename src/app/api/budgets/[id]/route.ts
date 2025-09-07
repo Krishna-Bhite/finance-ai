@@ -1,32 +1,38 @@
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "../../auth/[...nextauth]/options";
 import prisma from "@/lib/prisma";
 
-export async function PATCH(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params;
-  const data = await req.json();
+// PATCH (update budget)
+export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const body = await req.json();
+  const { amount, startDate, endDate } = body;
 
   const updated = await prisma.budget.update({
-    where: { id },
+    where: { id: params.id },
     data: {
-      ...data,
-      startDate: data.startDate ? new Date(data.startDate) : undefined,
-      endDate: data.endDate ? new Date(data.endDate) : undefined,
+      amount: parseFloat(amount),
+      startDate: new Date(startDate),
+      endDate: new Date(endDate),
     },
   });
 
   return NextResponse.json(updated);
 }
 
-export async function DELETE(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params;
+// DELETE budget
+export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
-  await prisma.budget.delete({ where: { id } });
+  await prisma.budget.delete({ where: { id: params.id } });
 
   return NextResponse.json({ success: true });
 }

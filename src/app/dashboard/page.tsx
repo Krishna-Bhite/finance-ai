@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -11,7 +10,8 @@ import {
 import Input from "@/components/ui/input";
 import Button from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-// import ThemeToggle from "@/components/ThemeToggle";
+import ThemeToggle from "@/components/ui/ThemeToggle";
+import { useTheme } from "next-themes";
 
 type Cat = { category: string; total: number };
 type Flow = { date: string; total: number };
@@ -29,6 +29,13 @@ interface Analytics {
 const glass = "bg-white/5 border border-white/10 backdrop-blur shadow-lg";
 
 export default function DashboardPage() {
+  const { theme } = useTheme();              // ✅ inside component
+  const isDark = theme === "dark";
+
+  const COLORS = isDark
+    ? ["#60a5fa", "#34d399", "#f87171", "#fbbf24"]
+    : ["#3b82f6", "#10b981", "#ef4444", "#f59e0b"];
+
   const [start, setStart] = useState<string>(() => {
     const d = new Date(Date.now() - 29 * 864e5);
     return d.toISOString().slice(0, 10);
@@ -67,14 +74,12 @@ export default function DashboardPage() {
     [data]
   );
 
-  const COLORS = ["#8884d8","#82ca9d","#ffc658","#ff7f7f","#8dd1e1","#a4de6c","#d0ed57"];
-
   return (
     <main className="p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">📊 Dashboard</h1>
-        {/* <ThemeToggle /> */}
+        <ThemeToggle />
       </div>
 
       {/* Filters */}
@@ -104,61 +109,88 @@ export default function DashboardPage() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className={glass}>
-          <CardHeader><CardTitle>Total Spend</CardTitle></CardHeader>
-          <CardContent className="text-2xl font-bold">${(data?.total ?? 0).toFixed(2)}</CardContent>
-        </Card>
-        <Card className={glass}>
-          <CardHeader><CardTitle>Transactions</CardTitle></CardHeader>
-          <CardContent className="text-2xl font-bold">{data?.count ?? 0}</CardContent>
-        </Card>
-        <Card className={glass}>
-          <CardHeader><CardTitle>Avg / Txn</CardTitle></CardHeader>
-          <CardContent className="text-2xl font-bold">${(data?.avg ?? 0).toFixed(2)}</CardContent>
-        </Card>
-        <Card className={glass}>
-          <CardHeader><CardTitle>Categories</CardTitle></CardHeader>
-          <CardContent className="text-2xl font-bold">{data?.byCategory?.length ?? 0}</CardContent>
-        </Card>
+        {[
+          { title: "Total Spend", value: `$${(data?.total ?? 0).toFixed(2)}` },
+          { title: "Transactions", value: data?.count ?? 0 },
+          { title: "Avg / Txn", value: `$${(data?.avg ?? 0).toFixed(2)}` },
+          { title: "Categories", value: data?.byCategory?.length ?? 0 },
+        ].map((item, i) => (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.1 }}
+          >
+            <Card className={glass}>
+              <CardHeader>
+                <CardTitle>{item.title}</CardTitle>
+              </CardHeader>
+              <CardContent className="text-2xl font-bold">{item.value}</CardContent>
+            </Card>
+          </motion.div>
+        ))}
       </div>
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className={glass}>
-          <CardHeader><CardTitle>Spending Breakdown</CardTitle></CardHeader>
-          <CardContent className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Tooltip />
-                <Legend />
-                <Pie dataKey="value" data={pieData} outerRadius={90} isAnimationActive>
-                  {pieData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+        {/* Spending Breakdown */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, delay: 0.3 }}
+        >
+          <Card className={glass}>
+            <CardHeader><CardTitle>Spending Breakdown</CardTitle></CardHeader>
+            <CardContent className="h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Tooltip />
+                  <Legend />
+                  <Pie dataKey="value" data={pieData} outerRadius={90} isAnimationActive>
+                    {pieData.map((_, i) => (
+                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </motion.div>
 
-        <Card className={glass}>
-          <CardHeader><CardTitle>Cash Flow Trend</CardTitle></CardHeader>
-          <CardContent className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={data?.cashflow || []}>
-                <defs>
-                  <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#8884d8" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                <XAxis dataKey="date" />
-                <YAxis />
-                <Tooltip />
-                <Area type="monotone" dataKey="total" stroke="#8884d8" fillOpacity={1} fill="url(#g1)" isAnimationActive />
-              </AreaChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+        {/* Cash Flow Trend */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, delay: 0.5 }}
+        >
+          <Card className={glass}>
+            <CardHeader><CardTitle>Cash Flow Trend</CardTitle></CardHeader>
+            <CardContent className="h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={data?.cashflow || []}>
+                  <defs>
+                    <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8}/>
+                      <stop offset="95%" stopColor="#8884d8" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                  <XAxis dataKey="date" />
+                  <YAxis />
+                  <Tooltip />
+                  <Area
+                    type="monotone"
+                    dataKey="total"
+                    stroke="#8884d8"
+                    fillOpacity={1}
+                    fill="url(#g1)"
+                    isAnimationActive
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
 
       {/* Anomalies + Insights */}
