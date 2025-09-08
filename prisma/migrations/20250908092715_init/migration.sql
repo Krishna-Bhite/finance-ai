@@ -61,26 +61,39 @@ CREATE TABLE "public"."Expense" (
 );
 
 -- CreateTable
-CREATE TABLE "public"."Budget" (
+CREATE TABLE "public"."Revenue" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
-    "trackingPeriodId" TEXT,
-    "amount" DOUBLE PRECISION NOT NULL,
-    "startDate" TIMESTAMP(3) NOT NULL,
-    "endDate" TIMESTAMP(3) NOT NULL,
+    "month" INTEGER NOT NULL,
+    "year" INTEGER NOT NULL,
+    "total" DOUBLE PRECISION NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "Budget_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "Revenue_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "public"."TrackingPeriod" (
+CREATE TABLE "public"."RevenueSource" (
     "id" TEXT NOT NULL,
+    "revenueId" TEXT NOT NULL,
     "name" TEXT NOT NULL,
-    "startDate" TIMESTAMP(3) NOT NULL,
-    "endDate" TIMESTAMP(3) NOT NULL,
+    "amount" DOUBLE PRECISION NOT NULL,
 
-    CONSTRAINT "TrackingPeriod_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "RevenueSource_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."Goal" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "description" TEXT,
+    "neededMoney" DOUBLE PRECISION NOT NULL,
+    "currentMoney" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "deadline" TIMESTAMP(3) NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Goal_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -108,7 +121,10 @@ ALTER TABLE "public"."Session" ADD CONSTRAINT "Session_userId_fkey" FOREIGN KEY 
 ALTER TABLE "public"."Expense" ADD CONSTRAINT "Expense_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "public"."Budget" ADD CONSTRAINT "Budget_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "public"."Revenue" ADD CONSTRAINT "Revenue_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "public"."Budget" ADD CONSTRAINT "Budget_trackingPeriodId_fkey" FOREIGN KEY ("trackingPeriodId") REFERENCES "public"."TrackingPeriod"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "public"."RevenueSource" ADD CONSTRAINT "RevenueSource_revenueId_fkey" FOREIGN KEY ("revenueId") REFERENCES "public"."Revenue"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."Goal" ADD CONSTRAINT "Goal_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;

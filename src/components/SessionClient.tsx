@@ -32,7 +32,7 @@ export default function SessionClient() {
       
 
       {/* Buttons */}
-      <div className="flex flex-col sm:flex-row gap-4 justify-center">
+      <div className="flex flex-col sm:flex-row gap-5 justify-center">
         <Link href="/dashboard">
           <button className="px-6 py-3 bg-gray-900 text-white rounded-2xl shadow-lg hover:bg-gray-700 transition-all duration-200 w-full sm:w-auto font-semibold">
             Go to Dashboard
@@ -41,6 +41,18 @@ export default function SessionClient() {
         <Link href="/expenses">
           <button className="px-6 py-3 bg-gray-900 text-white rounded-2xl shadow-lg hover:bg-gray-700 transition-all duration-200 w-full sm:w-auto font-semibold">
             Add Expenses
+          </button>
+        </Link>
+        
+        <Link href="/revenues">
+          <button className="px-6 py-3 bg-gray-900 text-white rounded-2xl shadow-lg hover:bg-gray-700 transition-all duration-200 w-full sm:w-auto font-semibold">
+            Add revenues
+          </button>
+        </Link>
+
+        <Link href="/goals">
+          <button className="px-10 py-3 bg-gray-900 text-white rounded-2xl shadow-lg hover:bg-gray-700 transition-all duration-200 w-full sm:w-auto font-semibold">
+            Add Goal
           </button>
         </Link>
       </div>

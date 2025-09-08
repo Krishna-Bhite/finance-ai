@@ -80,10 +80,12 @@ model Revenue {
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId     String
   month      Int      // 1–12 (Jan–Dec)
-  year       Int      // for separating years
+  year       Int      // separate years
   total      Float    // total revenue for that month
   sources    RevenueSource[]
   createdAt  DateTime @default(now())
+
+  @@unique([userId, month, year], name: "userId_month_year")  // ✅ only 1 revenue per user per month/year
 }
 
 model RevenueSource {
@@ -93,6 +95,7 @@ model RevenueSource {
   name      String   // source name
   amount    Float    // revenue from this source
 }
+
 
 model Goal {
   id           String   @id @default(cuid())

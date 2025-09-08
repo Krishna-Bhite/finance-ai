@@ -3,13 +3,6 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/options";
 import prisma from "@/lib/prisma";
 
-interface ExpenseInput {
-  amount: number;
-  category: string;
-  description?: string;
-  date?: string;
-}
-
 // ✅ GET all expenses with filters
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
@@ -55,7 +48,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body: ExpenseInput = await req.json();
+  const body = await req.json();
   const { amount, category, description, date } = body;
 
   const user = await prisma.user.findUnique({

@@ -17,7 +17,7 @@ interface Expense {
   amount: number;
   category: string;
   description: string;
-  date: string; // new: comes from DB
+  date: string; // comes from DB
 }
 
 // Category icons
@@ -30,15 +30,23 @@ const categoryIcons: Record<string, string> = {
 
 export default function ExpensesPage() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
+
+  // Helper to get today in YYYY-MM-DD format
+  const getToday = () => new Date().toISOString().split("T")[0];
+
+  // Add expense state
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("");
   const [description, setDescription] = useState("");
+  const [date, setDate] = useState(getToday()); // ✅ default to today
   const [error, setError] = useState("");
 
+  // Edit expense state
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editAmount, setEditAmount] = useState("");
   const [editCategory, setEditCategory] = useState("");
   const [editDescription, setEditDescription] = useState("");
+  const [editDate, setEditDate] = useState("");
 
   // Fetch expenses
   async function fetchExpenses() {
@@ -53,8 +61,8 @@ export default function ExpensesPage() {
 
   // Add expense
   async function addExpense() {
-    if (!amount || !category) {
-      setError("⚠ Please enter both Amount and Category!");
+    if (!amount || !category || !date) {
+      setError("⚠ Please enter Amount, Category and Date!");
       return;
     }
     setError("");
@@ -66,12 +74,15 @@ export default function ExpensesPage() {
         amount: parseFloat(amount),
         category,
         description,
+        date,
       }),
     });
 
+    // reset fields
     setAmount("");
     setCategory("");
     setDescription("");
+    setDate(getToday()); // ✅ reset to today again
     fetchExpenses();
   }
 
@@ -87,12 +98,13 @@ export default function ExpensesPage() {
     setEditAmount(exp.amount.toString());
     setEditCategory(exp.category);
     setEditDescription(exp.description);
+    setEditDate(exp.date.split("T")[0]);
   }
 
   // Save edit
   async function saveEdit(id: string) {
-    if (!editAmount || !editCategory) {
-      setError("⚠ Please enter both Amount and Category!");
+    if (!editAmount || !editCategory || !editDate) {
+      setError("⚠ Please enter Amount, Category and Date!");
       return;
     }
     setError("");
@@ -104,6 +116,7 @@ export default function ExpensesPage() {
         amount: parseFloat(editAmount),
         category: editCategory,
         description: editDescription,
+        date: editDate,
       }),
     });
     setEditingId(null);
@@ -146,6 +159,13 @@ export default function ExpensesPage() {
               onChange={(e) => setDescription(e.target.value)}
             />
 
+            {/* ✅ date defaults to today */}
+            <Input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+            />
+
             <Button onClick={addExpense} className="w-full">
               Add Expense
             </Button>
@@ -181,7 +201,15 @@ export default function ExpensesPage() {
                         <Input
                           type="text"
                           value={editDescription}
-                          onChange={(e) => setEditDescription(e.target.value)}
+                          onChange={(e) =>
+                            setEditDescription(e.target.value)
+                          }
+                        />
+                        {/* ✅ edit keeps current value */}
+                        <Input
+                          type="date"
+                          value={editDate}
+                          onChange={(e) => setEditDate(e.target.value)}
                         />
                         <div className="flex gap-2">
                           <Button
