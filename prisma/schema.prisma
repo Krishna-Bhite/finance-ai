@@ -1,4 +1,4 @@
-generator client {
+generator client { 
   provider = "prisma-client-js"
 }
 
@@ -56,42 +56,52 @@ model User {
   sessions Session[]
 
   expenses Expense[]
-  budgets  Budget[]
+  revenues Revenue[]
+  goals    Goal[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model Expense {
+  id          String   @id @default(cuid())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  amount      Float
+  category    String
+  description String?
+  date        DateTime @default(now())
+  receiptUrl  String?
+  createdAt   DateTime @default(now())
+}
+
+model Revenue {
   id         String   @id @default(cuid())
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId     String
-  amount     Float
-  category   String
-  description String?
-  date       DateTime @default(now())
-  receiptUrl String?
+  month      Int      // 1–12 (Jan–Dec)
+  year       Int      // for separating years
+  total      Float    // total revenue for that month
+  sources    RevenueSource[]
   createdAt  DateTime @default(now())
 }
 
-model Budget {
-  id              String          @id @default(cuid())
-  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId          String
-  trackingPeriod  TrackingPeriod? @relation(fields: [trackingPeriodId], references: [id])
-  trackingPeriodId String?
-  amount          Float
-  startDate       DateTime
-  endDate         DateTime
-  createdAt       DateTime @default(now())
+model RevenueSource {
+  id        String   @id @default(cuid())
+  revenue   Revenue  @relation(fields: [revenueId], references: [id], onDelete: Cascade)
+  revenueId String
+  name      String   // source name
+  amount    Float    // revenue from this source
 }
 
-
-model TrackingPeriod {
-  id        String   @id @default(cuid())
-  name      String
-  startDate DateTime
-  endDate   DateTime
-
-  budgets Budget[]
+model Goal {
+  id           String   @id @default(cuid())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String
+  name         String
+  description  String?
+  neededMoney  Float
+  currentMoney Float   @default(0)
+  deadline     DateTime
+  createdAt    DateTime @default(now())
 }

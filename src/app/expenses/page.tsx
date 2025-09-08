@@ -11,13 +11,13 @@ import {
   CardTitle,
 } from "../../components/ui/card";
 
-
 // Types
 interface Expense {
   id: string;
   amount: number;
   category: string;
   description: string;
+  date: string; // new: comes from DB
 }
 
 // Category icons
@@ -51,7 +51,7 @@ export default function ExpensesPage() {
     fetchExpenses();
   }, []);
 
-  // Add expense with validation
+  // Add expense
   async function addExpense() {
     if (!amount || !category) {
       setError("⚠ Please enter both Amount and Category!");
@@ -206,6 +206,10 @@ export default function ExpensesPage() {
                         — ${exp.amount} <br />
                         <span className="text-sm text-gray-400">
                           {exp.description || "No description"}
+                        </span>
+                        <br />
+                        <span className="text-xs text-gray-500">
+                          {new Date(exp.date).toISOString().split("T")[0]}
                         </span>
                       </div>
                     )}
