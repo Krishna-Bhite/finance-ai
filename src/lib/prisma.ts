@@ -1,17 +1,18 @@
-//Adding Prisma client helper (avoid duplicate PrismaClient in dev)
-
-
 // lib/prisma.ts
 import { PrismaClient } from "@prisma/client";
 
-declare global {
-  // allow global across module reloads in dev
-  // eslint-disable-next-line no-var
-  var prisma: PrismaClient | undefined;
-}
+const globalForPrisma = global as unknown as { prisma: PrismaClient };
 
-const prisma = global.prisma ?? new PrismaClient();
+export const prisma =
+  globalForPrisma.prisma ||
+  new PrismaClient({
+    datasources: {
+      db: {
+        url: process.env.DATABASE_URL,
+      },
+    },
+  });
 
-if (process.env.NODE_ENV !== "production") global.prisma = prisma;
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 
 export default prisma;

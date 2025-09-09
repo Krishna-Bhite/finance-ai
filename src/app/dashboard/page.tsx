@@ -1,238 +1,304 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useState, useMemo } from "react";
 import {
-  PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
-  AreaChart, Area, XAxis, YAxis, CartesianGrid
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  PieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
 } from "recharts";
 
-import Input from "@/components/ui/input";
-import Button from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import ThemeToggle from "@/components/ui/ThemeToggle";
-import { useTheme } from "next-themes";
-
-type Cat = { category: string; total: number };
-type Flow = { date: string; total: number };
-
 interface Analytics {
-  range: { start: string; end: string };
-  total: number;
-  count: number;
-  avg: number;
-  byCategory: Cat[];
-  cashflow: Flow[];
-  anomalies: Array<{ id: string; amount: number; category: string; description: string | null; createdAt: string; z: number }>;
+  totalRevenue: number;
+  totalSources: number;
+  totalExpenses: number;
+  savings: number;
+  cashflow: { x: string; total: number }[];
+  expenseCategories: { category: string; total: number }[];
+  aiInsight?: string;
+  prevMonth?: {
+    totalRevenue: number;
+    totalExpenses: number;
+    savings: number;
+  };
 }
 
-const glass = "bg-white/5 border border-white/10 backdrop-blur shadow-lg";
+const COLORS = ["#00CFFF", "#00E6A8", "#FFBB28", "#FF66C4", "#9D6BFF", "#FF4444"];
+
+const MONTHS = [
+  { value: 1, label: "Jan" },
+  { value: 2, label: "Feb" },
+  { value: 3, label: "Mar" },
+  { value: 4, label: "Apr" },
+  { value: 5, label: "May" },
+  { value: 6, label: "Jun" },
+  { value: 7, label: "Jul" },
+  { value: 8, label: "Aug" },
+  { value: 9, label: "Sep" },
+  { value: 10, label: "Oct" },
+  { value: 11, label: "Nov" },
+  { value: 12, label: "Dec" },
+];
 
 export default function DashboardPage() {
-  const { theme } = useTheme();              // ✅ inside component
-  const isDark = theme === "dark";
-
-  const COLORS = isDark
-    ? ["#60a5fa", "#34d399", "#f87171", "#fbbf24"]
-    : ["#3b82f6", "#10b981", "#ef4444", "#f59e0b"];
-
-  const [start, setStart] = useState<string>(() => {
-    const d = new Date(Date.now() - 29 * 864e5);
-    return d.toISOString().slice(0, 10);
-  });
-  const [end, setEnd] = useState<string>(() => new Date().toISOString().slice(0, 10));
-
   const [data, setData] = useState<Analytics | null>(null);
+  const [month, setMonth] = useState<string>("all");
+  const [year, setYear] = useState<number>(new Date().getFullYear());
   const [loading, setLoading] = useState(false);
-  const [insights, setInsights] = useState<string>("");
 
-  async function loadAnalytics() {
+  const loadAnalytics = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/analytics?start=${start}&end=${end}`);
-      const json = await res.json();
-      setData(json);
+      const res = await fetch(`/api/analytics?month=${month}&year=${year}`);
+      if (!res.ok) {
+        const txt = await res.text();
+        console.error("analytics error", txt);
+        setData(null);
+      } else {
+        const json = await res.json();
+        setData(json);
+      }
+    } catch (err) {
+      console.error("fetch error", err);
+      setData(null);
     } finally {
       setLoading(false);
     }
-  }
-
-  async function loadInsights() {
-    setInsights("Generating insights...");
-    const res = await fetch(`/api/insights?start=${start}&end=${end}`);
-    const json = await res.json();
-    setInsights(json.text || "No insights");
-  }
+  };
 
   useEffect(() => {
     loadAnalytics();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [month, year]);
 
-  const pieData = useMemo(
-    () => (data?.byCategory || []).map((c) => ({ name: c.category, value: c.total })),
-    [data]
-  );
+  const chartData = useMemo(() => {
+    if (!data?.cashflow) return [];
+    return data.cashflow.map((d) => ({ name: d.x, total: d.total }));
+  }, [data]);
+
+  const percentageChange = (curr: number, prev: number) => {
+    if (!prev || prev === 0) return "N/A";
+    const diff = ((curr - prev) / prev) * 100;
+    return `${diff > 0 ? "+" : ""}${diff.toFixed(1)}%`;
+  };
 
   return (
-    <main className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">📊 Dashboard</h1>
-        <ThemeToggle />
-      </div>
+    <div className="min-h-screen p-6 space-y-8 bg-gradient-to-br from-[#05070e] via-[#0a0f1f] to-black text-gray-200">
+      <h1 className="text-4xl font-extrabold bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500 bg-clip-text text-transparent drop-shadow-lg animate-pulse">
+        Dashboard
+      </h1>
 
       {/* Filters */}
-      <Card className={glass}>
-        <CardHeader>
-          <CardTitle>Filters</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-          <div className="sm:col-span-1">
-            <label className="text-sm opacity-80">Start date</label>
-            <Input type="date" value={start} onChange={(e) => setStart(e.target.value)} />
-          </div>
-          <div className="sm:col-span-1">
-            <label className="text-sm opacity-80">End date</label>
-            <Input type="date" value={end} onChange={(e) => setEnd(e.target.value)} />
-          </div>
-          <div className="sm:col-span-2 flex items-end gap-2">
-            <Button onClick={loadAnalytics} disabled={loading}>
-              {loading ? "Loading..." : "Apply"}
-            </Button>
-            <Button onClick={loadInsights} className="bg-purple-600">
-              Generate Insights ✨
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex gap-4">
+        <select
+          value={month}
+          onChange={(e) => setMonth(e.target.value)}
+          className="bg-white/10 border border-cyan-500/40 text-cyan-300 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500/70 shadow-lg hover:scale-105 transition-transform"
+        >
+          <option value="all">All Months</option>
+          {MONTHS.map((m) => (
+            <option key={m.value} value={m.value}>
+              {m.label}
+            </option>
+          ))}
+        </select>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {[
-          { title: "Total Spend", value: `$${(data?.total ?? 0).toFixed(2)}` },
-          { title: "Transactions", value: data?.count ?? 0 },
-          { title: "Avg / Txn", value: `$${(data?.avg ?? 0).toFixed(2)}` },
-          { title: "Categories", value: data?.byCategory?.length ?? 0 },
-        ].map((item, i) => (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
-          >
-            <Card className={glass}>
+        <select
+          value={year}
+          onChange={(e) => setYear(Number(e.target.value))}
+          className="bg-white/10 border border-cyan-500/40 text-cyan-300 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500/70 shadow-lg hover:scale-105 transition-transform"
+        >
+          {Array.from({ length: 6 }, (_, i) => {
+            const y = 2022 + i;
+            return (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            );
+          })}
+        </select>
+      </div>
+
+      {loading && <p className="text-gray-400 animate-pulse">Loading...</p>}
+      {!loading && data && (
+        <>
+          {/* KPI Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            {[{
+              title: "Total Revenue",
+              value: `₹${data.totalRevenue.toFixed(2)}`,
+              color: "text-cyan-400",
+              prev: data.prevMonth?.totalRevenue,
+              curr: data.totalRevenue
+            },{
+              title: "Revenue Sources",
+              value: data.totalSources,
+              color: "text-violet-400"
+            },{
+              title: "Total Expenses",
+              value: `₹${data.totalExpenses.toFixed(2)}`,
+              color: "text-pink-400",
+              prev: data.prevMonth?.totalExpenses,
+              curr: data.totalExpenses
+            },{
+              title: "Savings",
+              value: `₹${data.savings.toFixed(2)}`,
+              color: "text-teal-400",
+              prev: data.prevMonth?.savings,
+              curr: data.savings
+            }].map((kpi, i) => (
+              <Card
+                key={i}
+                className="bg-white/5 backdrop-blur-md shadow-xl border border-white/10 hover:scale-105 hover:border-cyan-500/40 transition-transform duration-300 rounded-2xl"
+              >
+                <CardHeader>
+                  <CardTitle className="text-gray-300">{kpi.title}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className={`text-2xl font-bold ${kpi.color}`}>{kpi.value}</p>
+                  {kpi.prev !== undefined && (
+                    <p className="text-sm text-gray-400">
+                      {percentageChange(kpi.curr!, kpi.prev)}
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Charts */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+            {/* Line Chart */}
+            <Card className="bg-white/5 backdrop-blur-md shadow-xl border border-white/10 rounded-2xl">
               <CardHeader>
-                <CardTitle>{item.title}</CardTitle>
+                <CardTitle className="text-cyan-300">Cashflow Trend</CardTitle>
               </CardHeader>
-              <CardContent className="text-2xl font-bold">{item.value}</CardContent>
+              <CardContent className="h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#222" />
+                    <XAxis dataKey="name" stroke="#aaa" />
+                    <YAxis stroke="#aaa" />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "#0f172a",
+                        border: "1px solid #334155",
+                        borderRadius: "8px",
+                        color: "#fff",
+                      }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="total"
+                      stroke="#00E6A8"
+                      strokeWidth={3}
+                      dot={{ r: 4, fill: "#00CFFF" }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
             </Card>
-          </motion.div>
-        ))}
-      </div>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Spending Breakdown */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.3 }}
-        >
-          <Card className={glass}>
-            <CardHeader><CardTitle>Spending Breakdown</CardTitle></CardHeader>
-            <CardContent className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Tooltip />
-                  <Legend />
-                  <Pie dataKey="value" data={pieData} outerRadius={90} isAnimationActive>
-                    {pieData.map((_, i) => (
-                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </motion.div>
+            {/* Pie Chart + Table */}
+            <Card className="bg-white/5 backdrop-blur-md shadow-xl border border-white/10 rounded-2xl">
+              <CardHeader>
+                <CardTitle className="text-violet-300">Expense Categories</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {data.expenseCategories?.length > 0 ? (
+                  <div className="flex flex-col items-center">
+                    <div className="h-64 w-full">
+                      <ResponsiveContainer>
+                        <PieChart>
+                          <Pie
+                            data={data.expenseCategories}
+                            dataKey="total"
+                            nameKey="category"
+                            outerRadius={100}
+                            label
+                          >
+                            {data.expenseCategories.map((_, index) => (
+                              <Cell
+                                key={`cell-${index}`}
+                                fill={COLORS[index % COLORS.length]}
+                              />
+                            ))}
+                          </Pie>
+                          <Tooltip
+                            contentStyle={{
+                              backgroundColor: "#0f172a",
+                              border: "1px solid #334155",
+                              borderRadius: "8px",
+                              color: "#fff",
+                            }}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
 
-        {/* Cash Flow Trend */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.5 }}
-        >
-          <Card className={glass}>
-            <CardHeader><CardTitle>Cash Flow Trend</CardTitle></CardHeader>
-            <CardContent className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={data?.cashflow || []}>
-                  <defs>
-                    <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8}/>
-                      <stop offset="95%" stopColor="#8884d8" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <Tooltip />
-                  <Area
-                    type="monotone"
-                    dataKey="total"
-                    stroke="#8884d8"
-                    fillOpacity={1}
-                    fill="url(#g1)"
-                    isAnimationActive
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </motion.div>
-      </div>
+                    <div className="mt-4 w-full">
+                      <h3 className="font-semibold mb-2 text-cyan-300">
+                        Top 5 Categories
+                      </h3>
+                      <table className="w-full text-sm border border-white/10 rounded-lg overflow-hidden">
+                        <thead>
+                          <tr className="bg-white/10 text-gray-300">
+                            <th className="text-left p-2">Category</th>
+                            <th className="text-right p-2">Amount (₹)</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {data.expenseCategories
+                            .sort((a, b) => b.total - a.total)
+                            .slice(0, 5)
+                            .map((cat, i) => (
+                              <tr
+                                key={i}
+                                className="border-t border-white/10 hover:bg-white/10 transition-colors"
+                              >
+                                <td className="p-2">{cat.category}</td>
+                                <td className="p-2 text-right">
+                                  {cat.total.toFixed(2)}
+                                </td>
+                              </tr>
+                            ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-64 text-gray-500">
+                    No expense data
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
 
-      {/* Anomalies + Insights */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className={glass}>
-          <CardHeader><CardTitle>Potential Anomalies (High Spends)</CardTitle></CardHeader>
-          <CardContent>
-            <AnimatePresence>
-              {(data?.anomalies || []).length === 0 ? (
-                <p className="opacity-70">No anomalies detected in the selected range.</p>
-              ) : (
-                <ul className="space-y-2">
-                  {data!.anomalies.map((a) => (
-                    <motion.li
-                      key={a.id}
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -8 }}
-                      className="p-3 rounded-md border border-white/10 bg-white/5"
-                    >
-                      <div className="font-medium">${a.amount.toFixed(2)} — {a.category}</div>
-                      <div className="text-sm opacity-80">
-                        {a.description || "No description"} · {new Date(a.createdAt).toLocaleDateString()}
-                      </div>
-                    </motion.li>
-                  ))}
-                </ul>
-              )}
-            </AnimatePresence>
-          </CardContent>
-        </Card>
-
-        <Card className={glass}>
-          <CardHeader><CardTitle>AI Insights</CardTitle></CardHeader>
-          <CardContent className="space-y-3">
-            <Button onClick={loadInsights} className="bg-purple-600">Regenerate</Button>
-            <div className="whitespace-pre-wrap text-sm leading-6 opacity-90">
-              {insights || "Click Generate Insights to fetch tips and summary."}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </main>
+          {/* AI Insight */}
+          {data.aiInsight && (
+            <Card className="mt-6 bg-white/5 backdrop-blur-md shadow-xl border-l-4 border-cyan-500/60 rounded-2xl">
+              <CardHeader>
+                <CardTitle className="text-cyan-400">AI Insight</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-300 italic">{data.aiInsight}</p>
+              </CardContent>
+            </Card>
+          )}
+        </>
+      )}
+    </div>
   );
 }

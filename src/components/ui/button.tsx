@@ -1,42 +1,37 @@
-"use client";
+import * as React from "react";
 
-import React from "react";
-import { motion, type MotionProps } from "framer-motion";
+export interface ButtonProps
+  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: "primary" | "secondary" | "outline" | "destructive";
+}
 
-type Variant = "default" | "secondary" | "destructive" | "outline";
-
-type MotionButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> &
-  MotionProps & {
-    className?: string;
-    variant?: Variant;
-  };
-
-export default function Button({
+const Button: React.FC<ButtonProps> = ({
   children,
   className = "",
-  variant = "default",
+  variant = "primary",
   ...props
-}: MotionButtonProps) {
-  const base =
-    "inline-flex items-center gap-2 px-4 py-2 rounded-md font-medium shadow-sm transition-colors";
+}) => {
+  let base =
+    "px-6 py-3 rounded-full font-semibold transition-transform shadow-md hover:scale-105";
 
-  const variants: Record<Variant, string> = {
-    default: "bg-blue-600 text-white hover:bg-blue-700",
-    secondary: "bg-gray-600 text-white hover:bg-gray-700",
-    destructive: "bg-red-600 text-white hover:bg-red-700",
+  let variants = {
+    primary:
+      "bg-gradient-to-r from-cyan-500 to-violet-600 text-white shadow-[0_0_15px_rgba(139,92,246,0.6)]",
+    secondary:
+      "bg-gradient-to-r from-pink-500 to-cyan-500 text-white shadow-[0_0_15px_rgba(236,72,153,0.6)]",
+    destructive:
+      "bg-transparent border border-red-500/40 text-red-400 hover:bg-red-500/10 shadow-[0_0_12px_rgba(239,68,68,0.4)]",
     outline:
-      "border border-gray-400 text-gray-800 bg-transparent hover:bg-gray-100",
+      "bg-transparent border border-cyan-500/40 text-cyan-400 hover:bg-cyan-500/10 shadow-[0_0_12px_rgba(6,182,212,0.4)]",
+    
+
   };
 
   return (
-    <motion.button
-      whileTap={{ scale: 0.97 }}
-      whileHover={{ scale: 1.02 }}
-      transition={{ type: "spring", stiffness: 400, damping: 20 }}
-      className={`${base} ${variants[variant]} ${className}`}
-      {...props}
-    >
+    <button className={`${base} ${variants[variant]} ${className}`} {...props}>
       {children}
-    </motion.button>
+    </button>
   );
-}
+};
+
+export default Button;

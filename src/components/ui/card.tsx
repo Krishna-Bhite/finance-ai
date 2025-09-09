@@ -1,43 +1,53 @@
-import React from "react";
-import { motion } from "framer-motion";
+import * as React from "react";
 
-// Main Card container
-export function Card({
+export const Card: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({
   children,
   className = "",
-}: { children: React.ReactNode; className?: string }) {
+  ...props
+}) => {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 6 }}
-      className={`border border-gray-700 rounded-lg bg-neutral-900 shadow-md ${className}`}
+    <div
+      className={`rounded-2xl p-6 backdrop-blur-lg bg-white/5 border border-white/10 shadow-[0_0_25px_rgba(6,182,212,0.15)] ${className}`}
+      {...props}
     >
       {children}
-    </motion.div>
+    </div>
   );
-}
+};
 
-// Card Header
-export function CardHeader({
+export const CardHeader: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({
   children,
   className = "",
-}: { children: React.ReactNode; className?: string }) {
-  return <div className={`p-4 border-b border-gray-700 ${className}`}>{children}</div>;
-}
+  ...props
+}) => {
+  return (
+    <div className={`mb-4 ${className}`} {...props}>
+      {children}
+    </div>
+  );
+};
 
-// Card Title
-export function CardTitle({
+export const CardTitle: React.FC<React.HTMLAttributes<HTMLHeadingElement>> = ({
   children,
   className = "",
-}: { children: React.ReactNode; className?: string }) {
-  return <h3 className={`text-lg font-semibold ${className}`}>{children}</h3>;
-}
+  ...props
+}) => {
+  return (
+    <h2
+      className={`text-2xl font-bold text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.6)] ${className}`}
+      {...props}
+    >
+      {children}
+    </h2>
+  );
+};
 
-// Card Content
-export function CardContent({
-  children,
-  className = "",
-}: { children: React.ReactNode; className?: string }) {
-  return <div className={`p-4 ${className}`}>{children}</div>;
-}
+export const CardContent: React.FC<
+  React.HTMLAttributes<HTMLDivElement>
+> = ({ children, className = "", ...props }) => {
+  return (
+    <div className={`space-y-4 ${className}`} {...props}>
+      {children}
+    </div>
+  );
+};
