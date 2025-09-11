@@ -15,7 +15,6 @@ import {
   TableHeader,
   TableRow,
 } from "../../components/ui/table";
-import { Badge } from "../../components/ui/badge";
 import Input from "../../components/ui/input";
 import Button from "../../components/ui/button";
 import { Filter } from "lucide-react";
@@ -34,13 +33,11 @@ interface Expense {
   category: string;
   description: string;
   date: string;
-  status: string;
   vendor?: string;
 }
 
-// Categories & Statuses
+// Categories
 const categories = ["All", "Food", "Travel", "Shopping", "Technology", "Other"];
-const statuses = ["All", "Approved", "Pending", "Rejected"];
 
 // Helper for last 7 days
 const getLast7Days = () => {
@@ -69,14 +66,12 @@ export default function ExpensesPage() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
-  const [selectedStatus, setSelectedStatus] = useState("All");
 
   // Add form states
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
-  const [status, setStatus] = useState("Pending");
   const [error, setError] = useState("");
 
   // Filter state (default = today)
@@ -89,7 +84,6 @@ export default function ExpensesPage() {
   const [editCategory, setEditCategory] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [editDate, setEditDate] = useState("");
-  const [editStatus, setEditStatus] = useState("Pending");
 
   // Fetch
   async function fetchExpenses() {
@@ -110,15 +104,18 @@ export default function ExpensesPage() {
     }
     setError("");
 
+    // Capitalize category
+    const formattedCategory =
+      category.charAt(0).toUpperCase() + category.slice(1).toLowerCase();
+
     await fetch("/api/expenses", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         amount: parseFloat(amount),
-        category,
+        category: formattedCategory,
         description,
         date,
-        status,
       }),
     });
 
@@ -126,7 +123,6 @@ export default function ExpensesPage() {
     setCategory("");
     setDescription("");
     setDate(new Date().toISOString().split("T")[0]);
-    setStatus("Pending");
     fetchExpenses();
   }
 
@@ -143,7 +139,6 @@ export default function ExpensesPage() {
     setEditCategory(exp.category);
     setEditDescription(exp.description);
     setEditDate(exp.date.split("T")[0]);
-    setEditStatus(exp.status);
   }
 
   async function saveEdit(id: string) {
@@ -153,15 +148,17 @@ export default function ExpensesPage() {
     }
     setError("");
 
+    const formattedCategory =
+      editCategory.charAt(0).toUpperCase() + editCategory.slice(1).toLowerCase();
+
     await fetch(`/api/expenses/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         amount: parseFloat(editAmount),
-        category: editCategory,
+        category: formattedCategory,
         description: editDescription,
         date: editDate,
-        status: editStatus,
       }),
     });
 
@@ -178,30 +175,13 @@ export default function ExpensesPage() {
     const matchesCategory =
       selectedCategory === "All" || expense.category === selectedCategory;
 
-    const matchesStatus =
-      selectedStatus === "All" || expense.status === selectedStatus;
-
     const matchesDate =
       filterDate === "All" ||
       (filterDate === "custom" && expense.date.startsWith(filterDate)) ||
       expense.date.startsWith(filterDate);
 
-    return matchesSearch && matchesCategory && matchesStatus && matchesDate;
+    return matchesSearch && matchesCategory && matchesDate;
   });
-
-  // Badge Colors
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Approved":
-        return "bg-green-500/20 text-green-400 border-green-500/30";
-      case "Pending":
-        return "bg-yellow-500/20 text-yellow-400 border-yellow-500/30";
-      case "Rejected":
-        return "bg-red-500/20 text-red-400 border-red-500/30";
-      default:
-        return "bg-gray-500/20 text-gray-400 border-gray-500/30";
-    }
-  };
 
   return (
     <section
@@ -270,7 +250,7 @@ export default function ExpensesPage() {
                 <Filter className="mr-2" size={16} />
                 <SelectValue placeholder="Select Date" />
               </SelectTrigger>
-              <SelectContent className="bg-black/90 border-gray-600 max-h-[300px]">
+              <SelectContent className="bg-sky-400 border-gray-600 max-h-[300px]">
                 <SelectItem value="All" className="text-white">
                   All Dates
                 </SelectItem>
@@ -311,7 +291,6 @@ export default function ExpensesPage() {
                     <TableHead className="text-gray-300">Category</TableHead>
                     <TableHead className="text-gray-300">Description</TableHead>
                     <TableHead className="text-gray-300">Amount</TableHead>
-                    <TableHead className="text-gray-300">Status</TableHead>
                     <TableHead className="text-gray-300">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -351,29 +330,6 @@ export default function ExpensesPage() {
                               onChange={(e) => setEditAmount(e.target.value)}
                             />
                           </TableCell>
-                          <TableCell>
-                            <Select
-                              value={editStatus}
-                              onValueChange={setEditStatus}
-                            >
-                              <SelectTrigger className="bg-black/20 text-white">
-                                <SelectValue placeholder="Status" />
-                              </SelectTrigger>
-                              <SelectContent className="bg-black/90 border-gray-600">
-                                {statuses
-                                  .filter((s) => s !== "All")
-                                  .map((s) => (
-                                    <SelectItem
-                                      key={s}
-                                      value={s}
-                                      className="text-white"
-                                    >
-                                      {s}
-                                    </SelectItem>
-                                  ))}
-                              </SelectContent>
-                            </Select>
-                          </TableCell>
                           <TableCell className="flex gap-2">
                             <Button
                               onClick={() => saveEdit(exp.id)}
@@ -403,21 +359,16 @@ export default function ExpensesPage() {
                           <TableCell className="text-pink-400 font-semibold">
                             ₹{exp.amount}
                           </TableCell>
-                          <TableCell>
-                            <Badge className={getStatusColor(exp.status)}>
-                              {exp.status}
-                            </Badge>
-                          </TableCell>
                           <TableCell className="flex gap-2">
                             <Button
                               onClick={() => startEdit(exp)}
-                              className="bg-yellow-400 text-black"
+                              className="bg-sky-400 text-black"
                             >
                               Edit
                             </Button>
                             <Button
                               onClick={() => deleteExpense(exp.id)}
-                              className="bg-red-600 text-white"
+                              className="bg-violet-600 text-white"
                             >
                               Delete
                             </Button>

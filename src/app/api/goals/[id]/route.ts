@@ -14,7 +14,7 @@ export async function PATCH(req: Request, { params }: RouteParams) {
 
   const body = await req.json();
 
-  // Find goal and verify email ownership
+  // Verify ownership
   const goal = await prisma.goal.findUnique({
     where: { id: params.id },
     include: { user: true },
@@ -24,11 +24,12 @@ export async function PATCH(req: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  // Map frontend fields to DB fields
   const data: any = {};
   if (body.name !== undefined) data.name = body.name;
   if (body.description !== undefined) data.description = body.description;
-  if (body.neededMoney !== undefined) data.neededMoney = body.neededMoney;
-  if (body.currentMoney !== undefined) data.currentMoney = body.currentMoney;
+  if (body.targetAmount !== undefined) data.neededMoney = body.targetAmount;
+  if (body.currentAmount !== undefined) data.currentMoney = body.currentAmount;
   if (body.deadline !== undefined) data.deadline = new Date(body.deadline);
 
   const updatedGoal = await prisma.goal.update({

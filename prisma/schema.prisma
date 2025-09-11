@@ -94,6 +94,7 @@ model RevenueSource {
   revenueId String
   name      String   // source name
   amount    Float    // revenue from this source
+  createdAt DateTime @default(now())  // Add this line
 }
 
 

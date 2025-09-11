@@ -2,21 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import  Input  from "@/components/ui/input";
-import  Button  from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import Input from "@/components/ui/input";
+import Button from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface RevenueSource {
   id?: string;
@@ -46,14 +35,10 @@ export default function RevenuesPage() {
   const [error, setError] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  // filter controls
   const [filterMonth, setFilterMonth] = useState<number>(new Date().getMonth() + 1);
   const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear());
 
-  useEffect(() => {
-    fetchRevenues();
-  }, []);
-
+  useEffect(() => { fetchRevenues(); }, []);
   useEffect(() => {
     const sum = sources.reduce((acc, s) => acc + (s.amount || 0), 0);
     setTotal(sum);
@@ -65,51 +50,88 @@ export default function RevenuesPage() {
     setRevenues(data);
   }
 
+  function addSource() {
+    setSources(prev => [...prev, { name: "", amount: 0 }]);
+  }
+
   async function saveRevenue() {
-    if (!month || !year || total <= 0) {
-      setError("⚠ Please enter Month, Year, and at least one valid Source");
-      return;
+    try {
+      if (!month || !year || sources.length === 0 || total <= 0) {
+        setError("⚠ Please enter Month, Year, and at least one valid Source");
+        return;
+      }
+
+      const validSources = sources.filter(s => s.name.trim() !== "" && s.amount > 0);
+      if (validSources.length === 0) {
+        setError("⚠ Please add at least one valid source with name and amount");
+        return;
+      }
+
+      const payload = {
+        month: Number(month),
+        year: Number(year),
+        sources: validSources.map(s => ({
+          id: s.id || undefined,
+          name: s.name.trim(),
+          amount: Number(s.amount)
+        }))
+      };
+
+      const method = editingId ? "PATCH" : "POST";
+      const url = editingId
+        ? `/api/revenues/${editingId}?type=revenue`
+        : "/api/revenues";
+
+      const response = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Failed to save revenue");
+
+      // Reset form
+      setMonth(new Date().getMonth() + 1);
+      setYear(new Date().getFullYear());
+      setSources([{ name: "", amount: 0 }]);
+      setEditingId(null);
+      setError("");
+
+      await fetchRevenues();
+    } catch (error: any) {
+      console.error("Save revenue error:", error);
+      setError(error.message || "Failed to save revenue. Please try again.");
     }
-    setError("");
-
-    const method = editingId ? "PUT" : "POST";
-    const url = editingId ? `/api/revenues/${editingId}` : "/api/revenues";
-
-    await fetch(url, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ month, year, sources }),
-    });
-
-    setSources([{ name: "", amount: 0 }]);
-    setMonth(new Date().getMonth() + 1);
-    setYear(new Date().getFullYear());
-    setEditingId(null);
-    fetchRevenues();
   }
 
   function editRevenue(rev: Revenue) {
     setMonth(rev.month);
     setYear(rev.year);
-    setSources(rev.sources.map((s) => ({ ...s })));
+    setSources(rev.sources.map(s => ({ id: s.id, name: s.name, amount: s.amount })));
     setEditingId(rev.id);
   }
 
   async function deleteRevenue(id: string) {
-    if (!confirm("Are you sure you want to delete this revenue?")) return;
-    await fetch(`/api/revenues/${id}`, { method: "DELETE" });
+    await fetch(`/api/revenues/${id}?type=revenue`, { method: "DELETE" });
     fetchRevenues();
   }
 
-  // filter by selected month/year
+  async function deleteSource(idx: number, source: RevenueSource) {
+    if (editingId && source.id) {
+      await fetch(`/api/revenues/${source.id}?type=revenueSource`, { method: "DELETE" });
+      fetchRevenues();
+    }
+    setSources(prev => prev.filter((_, i) => i !== idx));
+  }
+
   const filteredRevenues = revenues.filter(
-    (rev) => rev.month === filterMonth && rev.year === filterYear
+    rev => rev.month === filterMonth && rev.year === filterYear
   );
 
   return (
-    <section className="py-20 px-4 sm:px-6 lg:px-8 relative min-h-screen ">
+    <section className="py-20 px-4 sm:px-6 lg:px-8 relative min-h-screen">
       <div className="max-w-7xl mx-auto">
-        {/* Title */}
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl mb-4 bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent">
             💰 Revenues
@@ -120,17 +142,16 @@ export default function RevenuesPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Add/Edit Revenue Form */}
-          <Card className="backdrop-blur-xl bg-black/40 border border-green-400/20 rounded-2xl">
+          {/* Form */}
+          <Card className="mb-8 backdrop-blur-xl bg-black/40 border border-green-400/20 rounded-2xl">
             <CardHeader>
-              <CardTitle className="text-green-400 text-lg">
+              <CardTitle className="text-green-400">
                 {editingId ? "✏️ Edit Revenue" : "➕ Add Revenue"}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {error && <p className="text-red-400 text-sm">{error}</p>}
 
-              {/* Month Selector */}
               <Select value={month.toString()} onValueChange={(v) => setMonth(Number(v))}>
                 <SelectTrigger className="bg-black/40 border-green-400/30 text-green-300">
                   <SelectValue placeholder="Month" />
@@ -144,7 +165,6 @@ export default function RevenuesPage() {
                 </SelectContent>
               </Select>
 
-              {/* Year Input */}
               <Input
                 type="number"
                 placeholder="Year"
@@ -155,7 +175,7 @@ export default function RevenuesPage() {
 
               <h4 className="text-green-300">📊 Revenue Sources</h4>
               {sources.map((s, idx) => (
-                <div key={idx} className="flex gap-2">
+                <div key={s.id || idx} className="flex gap-2 items-center">
                   <Input
                     type="text"
                     placeholder="Source Name"
@@ -178,14 +198,13 @@ export default function RevenuesPage() {
                     }}
                     className="bg-black/40 border-green-400/30 text-green-300"
                   />
+                  <Button variant="destructive" size="sm" onClick={() => deleteSource(idx, s)}>
+                    ✕
+                  </Button>
                 </div>
               ))}
 
-              <Button
-                variant="outline"
-                onClick={() => setSources([...sources, { name: "", amount: 0 }])}
-                className="border-green-500/40 text-green-300 hover:bg-green-500/20"
-              >
+              <Button variant="outline" onClick={addSource}>
                 + Add Source
               </Button>
 
@@ -202,7 +221,7 @@ export default function RevenuesPage() {
             </CardContent>
           </Card>
 
-          {/* Revenue List with Filter */}
+          {/* Revenue List */}
           <Card className="backdrop-blur-xl bg-black/40 border border-green-400/20 rounded-2xl">
             <CardHeader>
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -215,7 +234,7 @@ export default function RevenuesPage() {
                     <SelectTrigger className="bg-black/40 border-green-400/30 text-green-300">
                       <SelectValue placeholder="Month" />
                     </SelectTrigger>
-                    <SelectContent className="bg-black/90 border-green-400/30">
+                    <SelectContent className="bg-black/90 border-green-400/30 text-green-300">
                       {monthNames.map((name, idx) => (
                         <SelectItem key={idx + 1} value={(idx + 1).toString()}>
                           {name}
@@ -232,6 +251,7 @@ export default function RevenuesPage() {
                 </div>
               </div>
             </CardHeader>
+
             <CardContent>
               <div className="space-y-3">
                 {filteredRevenues.map((rev) => (
@@ -261,26 +281,24 @@ export default function RevenuesPage() {
                             <Button
                               variant="destructive"
                               onClick={() => deleteRevenue(rev.id)}
+                              className="border-red-500/40 text-red-300 hover:bg-red-500/20"
                             >
                               Delete
                             </Button>
                           </div>
                         </div>
-                        <ul className="text-sm text-gray-400 mt-1 pl-3 list-disc">
-                          {rev.sources.map((s) => (
-                            <li key={s.id}>
-                              <span className="text-green-200">{s.name}</span>: ${s.amount.toFixed(2)}
-                            </li>
+                        <div className="space-y-2">
+                          {rev.sources.map((source) => (
+                            <div key={source.id} className="text-sm text-gray-400">
+                              {source.name}: ${source.amount.toFixed(2)}
+                            </div>
                           ))}
-                        </ul>
+                        </div>
                       </CardContent>
                     </Card>
                   </motion.div>
                 ))}
               </div>
-              {filteredRevenues.length === 0 && (
-                <p className="text-gray-400 text-center py-6">No revenues found for selected month/year.</p>
-              )}
             </CardContent>
           </Card>
         </div>

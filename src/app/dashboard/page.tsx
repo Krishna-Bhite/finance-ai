@@ -26,6 +26,7 @@ import {
   Users,
   CreditCard,
   Activity,
+  RefreshCcw,
 } from "lucide-react";
 
 interface ExpenseByDate {
@@ -68,26 +69,28 @@ const MONTHS = [
 
 export default function DashboardPage() {
   const [data, setData] = useState<Analytics | null>(null);
-  const [month, setMonth] = useState<string>(`${new Date().getMonth() + 1}`); // ✅ default current month
+  const [month, setMonth] = useState<string>(`${new Date().getMonth() + 1}`);
   const [year, setYear] = useState<number>(new Date().getFullYear());
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+
   const pageSize = 7;
 
- // ✅ Use total expenses trend instead of cashflow
+  // ✅ Use total expenses trend instead of cashflow
   const chartData = useMemo(() => {
     if (!data?.expensesByDate) return [];
     return data.expensesByDate.map((d) => ({ name: d.date, total: d.total }));
   }, [data]);
 
-// ✅ Slice data into pages of 7
-const paginatedData = chartData.slice(
-  currentPage * pageSize,
-  (currentPage + 1) * pageSize
-);
+  // ✅ Slice data into pages of 7
+  const paginatedData = chartData.slice(
+    currentPage * pageSize,
+    (currentPage + 1) * pageSize
+  );
 
-const hasPrev = currentPage > 0;
-const hasNext = (currentPage + 1) * pageSize < chartData.length;
+  const hasPrev = currentPage > 0;
+  const hasNext = (currentPage + 1) * pageSize < chartData.length;
 
   const loadAnalytics = async () => {
     setLoading(true);
@@ -113,13 +116,22 @@ const hasNext = (currentPage + 1) * pageSize < chartData.length;
     loadAnalytics();
   }, [month, year]);
 
-
-
   const percentageChange = (curr: number, prev: number) => {
     if (!prev || prev === 0) return "N/A";
     const diff = ((curr - prev) / prev) * 100;
     return `${diff > 0 ? "+" : ""}${diff.toFixed(1)}%`;
   };
+
+  // ✅ Filtered data for Expense Breakdown
+  const filteredCategories =
+    selectedCategory === "all"
+      ? data?.expenseCategories ?? []
+      : data?.expenseCategories.filter((c) => c.category === selectedCategory) ?? [];
+
+  const selectedTotal =
+    selectedCategory === "all"
+      ? data?.totalExpenses ?? 0
+      : data?.expenseCategories.find((c) => c.category === selectedCategory)?.total ?? 0;
 
   return (
     <section id="dashboard" className="py-20 px-4 sm:px-6 lg:px-8 relative">
@@ -163,6 +175,14 @@ const hasNext = (currentPage + 1) * pageSize < chartData.length;
               );
             })}
           </select>
+          <button
+            onClick={loadAnalytics}
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-purple-600 text-white rounded-xl shadow-md hover:scale-105 transition-transform disabled:opacity-50"
+          >
+            <RefreshCcw size={18} className={loading ? "animate-spin" : ""} />
+            Refresh
+          </button>
         </div>
 
         {loading && (
@@ -274,100 +294,141 @@ const hasNext = (currentPage + 1) * pageSize < chartData.length;
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
               {/* ✅ Expense Trend */}
               <Card className="bg-black/40 backdrop-blur-md border border-cyan-500/20">
-      <CardHeader>
-        <CardTitle className="text-white flex justify-between items-center">
-          Expense Trend
-          <div className="space-x-2">
-            <button
-              disabled={!hasPrev}
-              onClick={() => setCurrentPage((p) => p - 1)}
-              className="px-2 py-1 bg-gray-700 text-white rounded disabled:opacity-40"
-            >
-              Prev
-            </button>
-            <button
-              disabled={!hasNext}
-              onClick={() => setCurrentPage((p) => p + 1)}
-              className="px-2 py-1 bg-gray-700 text-white rounded disabled:opacity-40"
-            >
-              Next
-            </button>
-          </div>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {paginatedData.length > 0 ? (
-          <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={paginatedData}>
-              <defs>
-                <linearGradient id="purpleGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.8} />
-                  <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-
-              <CartesianGrid stroke="#374151" />
-              <XAxis dataKey="name" stroke="#9ca3af" />
-              <YAxis stroke="#9ca3af" />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "rgba(0, 0, 0, 0.8)",
-                  border: "1px solid #8b5cf6",
-                  borderRadius: "8px",
-                  color: "white",
-                }}
-              />
-              <Area
-                type="monotone"
-                dataKey="total"
-                stroke="none"
-                fill="url(#purpleGradient)"
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        ) : (
-          <div className="flex items-center justify-center h-64 text-gray-500">
-            No expense data
-          </div>
-        )}
-      </CardContent>
-    </Card>
-
-              {/* Expense Breakdown */}
-              <Card className="bg-black/40 backdrop-blur-md border border-cyan-500/20">
                 <CardHeader>
-                  <CardTitle className="text-white">Expense Breakdown</CardTitle>
+                  <CardTitle className="text-white flex justify-between items-center">
+                    Expense Trend
+                    <div className="space-x-2">
+                      <button
+                        disabled={!hasPrev}
+                        onClick={() => setCurrentPage((p) => p - 1)}
+                        className="px-2 py-1 bg-gray-700 text-white rounded disabled:opacity-40"
+                      >
+                        Prev
+                      </button>
+                      <button
+                        disabled={!hasNext}
+                        onClick={() => setCurrentPage((p) => p + 1)}
+                        className="px-2 py-1 bg-gray-700 text-white rounded disabled:opacity-40"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {data.expenseCategories?.length > 0 ? (
+                  {paginatedData.length > 0 ? (
                     <ResponsiveContainer width="100%" height={300}>
-                      <PieChart>
-                        <Pie
-                          data={data.expenseCategories}
-                          dataKey="total"
-                          nameKey="category"
-                          outerRadius={100}
-                          label={({ name, percent }: { name: string; percent: number }) =>
-                            `${name} ${(percent * 100).toFixed(0)}%`
-                          }
-                        >
-                          {data.expenseCategories.map((_, index) => (
-                            <Cell
-                              key={`cell-${index}`}
-                              fill={COLORS[index % COLORS.length]}
+                      <AreaChart data={paginatedData}>
+                        <defs>
+                          <linearGradient
+                            id="purpleGradient"
+                            x1="0"
+                            y1="0"
+                            x2="0"
+                            y2="1"
+                          >
+                            <stop
+                              offset="5%"
+                              stopColor="#8b5cf6"
+                              stopOpacity={0.8}
                             />
-                          ))}
-                        </Pie>
+                            <stop
+                              offset="95%"
+                              stopColor="#8b5cf6"
+                              stopOpacity={0}
+                            />
+                          </linearGradient>
+                        </defs>
+
+                        <CartesianGrid stroke="#374151" />
+                        <XAxis dataKey="name" stroke="#9ca3af" />
+                        <YAxis stroke="#9ca3af" />
                         <Tooltip
                           contentStyle={{
                             backgroundColor: "rgba(0, 0, 0, 0.8)",
-                            border: "1px solid #06b6d4",
+                            border: "1px solid #8b5cf6",
                             borderRadius: "8px",
                             color: "white",
                           }}
                         />
-                      </PieChart>
+                        <Area
+                          type="monotone"
+                          dataKey="total"
+                          stroke="none"
+                          fill="url(#purpleGradient)"
+                        />
+                      </AreaChart>
                     </ResponsiveContainer>
+                  ) : (
+                    <div className="flex items-center justify-center h-64 text-gray-500">
+                      No expense data
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* ✅ Expense Breakdown with Filter */}
+              <Card className="bg-black/40 backdrop-blur-md border border-cyan-500/20">
+                <CardHeader>
+                  <CardTitle className="text-white flex justify-between items-center">
+                    Expense Breakdown
+                    <select
+                      value={selectedCategory}
+                      onChange={(e) => setSelectedCategory(e.target.value)}
+                      className="ml-4 bg-black/40 border border-cyan-500/40 text-cyan-300 rounded-lg px-3 py-1 text-sm focus:outline-none"
+                    >
+                      <option value="all">All Categories</option>
+                      {data.expenseCategories.map((c, idx) => (
+                        <option key={idx} value={c.category}>
+                          {c.category}
+                        </option>
+                      ))}
+                    </select>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {filteredCategories.length > 0 ? (
+                    <>
+                      <ResponsiveContainer width="100%" height={300}>
+                        <PieChart>
+                          <Pie
+                            data={filteredCategories}
+                            dataKey="total"
+                            nameKey="category"
+                            outerRadius={100}
+                            label={({ category, percent }) =>
+                              `${category} ${
+                                percent !== undefined
+                                  ? (percent * 100).toFixed(0)
+                                  : "0"
+                              }%`
+                            }
+                          >
+                            {filteredCategories.map((_, index) => (
+                              <Cell
+                                key={`cell-${index}`}
+                                fill={COLORS[index % COLORS.length]}
+                              />
+                            ))}
+                          </Pie>
+                          <Tooltip
+                            contentStyle={{
+                              backgroundColor: "rgba(0, 0, 0, 0.8)",
+                              border: "1px solid #06b6d4",
+                              borderRadius: "8px",
+                              color: "white",
+                            }}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <p className="text-center text-cyan-300 mt-4">
+                        Total for{" "}
+                        {selectedCategory === "all"
+                          ? "All Categories"
+                          : selectedCategory}
+                        : ₹{selectedTotal.toFixed(2)}
+                      </p>
+                    </>
                   ) : (
                     <div className="flex items-center justify-center h-64 text-gray-500">
                       No expense data
@@ -393,4 +454,4 @@ const hasNext = (currentPage + 1) * pageSize < chartData.length;
       </div>
     </section>
   );
-} 
+}

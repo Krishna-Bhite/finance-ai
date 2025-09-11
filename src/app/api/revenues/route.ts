@@ -38,7 +38,10 @@ export async function POST(req: Request) {
     const { month, year, sources } = body;
 
     if (!month || !year) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Missing required fields" },
+        { status: 400 }
+      );
     }
 
     // Find existing revenue for this user/month/year
@@ -50,15 +53,17 @@ export async function POST(req: Request) {
       // Revenue exists → update sources
       for (const s of sources) {
         if (s.id) {
-          // Update existing source
           await prisma.revenueSource.update({
             where: { id: s.id },
             data: { name: s.name, amount: Number(s.amount) || 0 },
           });
         } else {
-          // Create new source
           await prisma.revenueSource.create({
-            data: { revenueId: revenue.id, name: s.name, amount: Number(s.amount) || 0 },
+            data: {
+              revenueId: revenue.id,
+              name: s.name,
+              amount: Number(s.amount) || 0,
+            },
           });
         }
       }
@@ -85,7 +90,10 @@ export async function POST(req: Request) {
     const updatedSources = await prisma.revenueSource.findMany({
       where: { revenueId: revenue.id },
     });
-    const total = updatedSources.reduce((sum, s) => sum + (s.amount || 0), 0);
+    const total = updatedSources.reduce(
+      (sum, s) => sum + (s.amount || 0),
+      0
+    );
 
     revenue = await prisma.revenue.update({
       where: { id: revenue.id },
@@ -96,6 +104,9 @@ export async function POST(req: Request) {
     return NextResponse.json(revenue);
   } catch (err) {
     console.error("POST /api/revenues error:", err);
-    return NextResponse.json({ error: "Failed to create or update revenue" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to create or update revenue" },
+      { status: 500 }
+    );
   }
 }
