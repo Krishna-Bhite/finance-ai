@@ -1,30 +1,47 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { signIn, useSession } from "next-auth/react";
+import { signIn, signOut, useSession } from "next-auth/react";
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import RevenuesPage from "@/app/revenues/page";
 import ExpensesPage from "@/app/expenses/page";
 import GoalsPage from "@/app/goals/page";
 import DashboardPage from "@/app/dashboard/page";
-import { Github, Twitter, Linkedin, Mail, Heart, CheckCircle, Award } from 'lucide-react';
+import {
+  Github,
+  Twitter,
+  Linkedin,
+  Mail,
+  Heart,
+  CheckCircle,
+  Award,
+  LogOut,
+} from "lucide-react";
 import { ImageWithFallback } from "@/components/ui/imageWithFallback";
 import Show2 from "@/components/ui/show2";
 import Show3 from "@/components/ui/show3";
 import Show4 from "@/components/ui/show4";
 
-
-
-// ...existing imports...
-
 export default function SessionClient() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
+  const [isLoading, setIsLoading] = useState(false);
+
   const footerLinks = {
-    Product: ['Features', 'Pricing', 'Documentation', 'API'],
-    Company: ['About', 'Blog', 'Careers', 'Contact'],
-    Resources: ['Help Center', 'Community', 'Tutorials', 'Status'],
-    Legal: ['Privacy Policy', 'Terms of Service', 'Security', 'Compliance']
+    Product: ["Features", "Pricing", "Documentation", "API"],
+    Company: ["About", "Blog", "Careers", "Contact"],
+    Resources: ["Help Center", "Community", "Tutorials", "Status"],
+    Legal: [
+      "Privacy Policy",
+      "Terms of Service",
+      "Security",
+      "Compliance",
+    ],
+  };
+
+  const handleSignIn = async () => {
+    setIsLoading(true);
+    await signIn("github");
   };
 
   // Smooth scroll effect for navbar links
@@ -43,6 +60,17 @@ export default function SessionClient() {
     });
   }, []);
 
+  // While checking session
+  if (status === "loading") {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-[#0a0f1f] via-[#050812] to-black text-gray-300">
+        <div className="animate-spin w-10 h-10 border-t-2 border-cyan-400 rounded-full"></div>
+        <span className="ml-3">Checking session...</span>
+      </div>
+    );
+  }
+
+  // If not signed in
   if (!session) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-[#0a0f1f] via-[#050812] to-black text-center">
@@ -50,40 +78,71 @@ export default function SessionClient() {
           Sign in with GitHub
         </h2>
         <button
-          onClick={() => signIn("github")}
-          className="mt-8 px-8 py-3 bg-gray-900 text-white rounded-2xl shadow-lg hover:bg-gray-700 transition-all duration-300 font-semibold"
+          onClick={handleSignIn}
+          disabled={isLoading}
+          className="mt-8 px-8 py-3 bg-gray-900 text-white rounded-2xl shadow-lg hover:bg-gray-700 transition-all duration-300 font-semibold relative"
         >
-          Sign In
+          {isLoading ? (
+            <div className="flex items-center space-x-2">
+              <div className="animate-spin w-5 h-5 border-t-2 border-r-2 border-cyan-500 border-b-2 border-violet-500 rounded-full" />
+              <span>Signing in...</span>
+            </div>
+          ) : (
+            "Sign In"
+          )}
         </button>
       </div>
     );
   }
 
+  // If signed in
   return (
-
-     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-black">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-black">
       {/* Background Effects */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-cyan-500/20 rounded-full blur-3xl"></div>
         <div className="absolute top-1/2 -left-40 w-80 h-80 bg-purple-500/20 rounded-full blur-3xl"></div>
         <div className="absolute -bottom-40 right-1/3 w-80 h-80 bg-blue-500/20 rounded-full blur-3xl"></div>
       </div>
+
       {/* Navbar */}
       <nav className="fixed top-0 left-0 w-full backdrop-blur-xl bg-white/5 border-b border-cyan-500/30 z-50 shadow-lg">
         <div className="max-w-7xl mx-auto flex justify-between items-center px-6 py-4">
           <h1 className="text-2xl font-extrabold bg-gradient-to-r from-cyan-400 to-violet-500 bg-clip-text text-transparent drop-shadow">
             FinanceAI
           </h1>
+
+          {/* Center Nav Links */}
           <div className="flex gap-6">
-            {["Home", "Dashboard", "Expenses", "Revenues", "Goals", "Footer"].map((item) => (
-              <a
-                key={item}
-                href={`#${item.toLowerCase()}`}
-                className="relative text-gray-300 hover:text-white transition-colors duration-300 after:content-[''] after:block after:h-[2px] after:w-0 after:bg-cyan-400 hover:after:w-full after:transition-all"
-              >
-                {item}
-              </a>
-            ))}
+            {["Home", "Dashboard", "Expenses", "Revenues", "Goals", "Footer"].map(
+              (item) => (
+                <a
+                  key={item}
+                  href={`#${item.toLowerCase()}`}
+                  className="relative text-gray-300 hover:text-white transition-colors duration-300 after:content-[''] after:block after:h-[2px] after:w-0 after:bg-cyan-400 hover:after:w-full after:transition-all"
+                >
+                  {item}
+                </a>
+              )
+            )}
+          </div>
+
+          {/* Right Side - Avatar + Sign Out */}
+          <div className="flex items-center gap-4">
+            {session?.user?.image && (
+              <img
+                src={session.user.image}
+                alt="Profile"
+                className="w-8 h-8 rounded-full border border-cyan-400"
+              />
+            )}
+            <button
+              onClick={() => signOut()}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/20 border border-red-400 text-red-300 font-semibold hover:bg-red-500/40 hover:text-white transition-all duration-300 shadow-lg"
+            >
+              <LogOut size={16} />
+              Sign Out
+            </button>
           </div>
         </div>
       </nav>
@@ -254,11 +313,11 @@ export default function SessionClient() {
           
           
           <DashboardPage />
-          <Show2/>
+          <Show2 />
           <ExpensesPage />
-          <Show3/>
+          <Show3 />
           <RevenuesPage />
-          <Show4/>
+          <Show4 />
           <GoalsPage />
           
         </main>
