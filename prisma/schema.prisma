@@ -108,3 +108,10 @@ model Goal {
   deadline     DateTime
   createdAt    DateTime @default(now())
 }
+
+model Saving {
+  id          String   @id @default(cuid())
+  saving      Float
+  month      Int 
+
+}

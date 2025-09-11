@@ -6,19 +6,32 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "../../components/ui/card";
 import {
-  LineChart,
-  Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
+  ResponsiveContainer,
   PieChart,
   Pie,
   Cell,
-  ResponsiveContainer,
 } from "recharts";
+import {
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  Users,
+  CreditCard,
+  Activity,
+} from "lucide-react";
+
+interface ExpenseByDate {
+  date: string;
+  total: number;
+}
 
 interface Analytics {
   totalRevenue: number;
@@ -33,30 +46,48 @@ interface Analytics {
     totalExpenses: number;
     savings: number;
   };
+  expensesByDate: ExpenseByDate[];
 }
 
-const COLORS = ["#00CFFF", "#00E6A8", "#FFBB28", "#FF66C4", "#9D6BFF", "#FF4444"];
+const COLORS = ["#06b6d4", "#8b5cf6", "#10b981", "#f59e0b", "#FF66C4", "#FF4444"];
 
 const MONTHS = [
-  { value: 1, label: "Jan" },
-  { value: 2, label: "Feb" },
-  { value: 3, label: "Mar" },
-  { value: 4, label: "Apr" },
-  { value: 5, label: "May" },
-  { value: 6, label: "Jun" },
-  { value: 7, label: "Jul" },
-  { value: 8, label: "Aug" },
-  { value: 9, label: "Sep" },
-  { value: 10, label: "Oct" },
-  { value: 11, label: "Nov" },
-  { value: 12, label: "Dec" },
+  { value: "1", label: "Jan" },
+  { value: "2", label: "Feb" },
+  { value: "3", label: "Mar" },
+  { value: "4", label: "Apr" },
+  { value: "5", label: "May" },
+  { value: "6", label: "Jun" },
+  { value: "7", label: "Jul" },
+  { value: "8", label: "Aug" },
+  { value: "9", label: "Sep" },
+  { value: "10", label: "Oct" },
+  { value: "11", label: "Nov" },
+  { value: "12", label: "Dec" },
 ];
 
 export default function DashboardPage() {
   const [data, setData] = useState<Analytics | null>(null);
-  const [month, setMonth] = useState<string>("all");
+  const [month, setMonth] = useState<string>(`${new Date().getMonth() + 1}`); // ✅ default current month
   const [year, setYear] = useState<number>(new Date().getFullYear());
   const [loading, setLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(0);
+  const pageSize = 7;
+
+ // ✅ Use total expenses trend instead of cashflow
+  const chartData = useMemo(() => {
+    if (!data?.expensesByDate) return [];
+    return data.expensesByDate.map((d) => ({ name: d.date, total: d.total }));
+  }, [data]);
+
+// ✅ Slice data into pages of 7
+const paginatedData = chartData.slice(
+  currentPage * pageSize,
+  (currentPage + 1) * pageSize
+);
+
+const hasPrev = currentPage > 0;
+const hasNext = (currentPage + 1) * pageSize < chartData.length;
 
   const loadAnalytics = async () => {
     setLoading(true);
@@ -82,10 +113,7 @@ export default function DashboardPage() {
     loadAnalytics();
   }, [month, year]);
 
-  const chartData = useMemo(() => {
-    if (!data?.cashflow) return [];
-    return data.cashflow.map((d) => ({ name: d.x, total: d.total }));
-  }, [data]);
+
 
   const percentageChange = (curr: number, prev: number) => {
     if (!prev || prev === 0) return "N/A";
@@ -94,211 +122,275 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen p-6 space-y-8 bg-gradient-to-br from-[#05070e] via-[#0a0f1f] to-black text-gray-200">
-      <h1 className="text-4xl font-extrabold bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500 bg-clip-text text-transparent drop-shadow-lg animate-pulse">
-        Dashboard
-      </h1>
+    <section id="dashboard" className="py-20 px-4 sm:px-6 lg:px-8 relative">
+      <div className="max-w-7xl mx-auto">
+        <div className="text-center mb-16">
+          <h2 className="text-3xl md:text-4xl mb-4 bg-gradient-to-r from-cyan-400 to-purple-600 bg-clip-text text-transparent">
+            Real-time Dashboard
+          </h2>
+          <p className="text-gray-400 text-lg max-w-2xl mx-auto">
+            Monitor your financial performance with AI-powered insights and
+            predictive analytics
+          </p>
+        </div>
 
-      {/* Filters */}
-      <div className="flex gap-4">
-        <select
-          value={month}
-          onChange={(e) => setMonth(e.target.value)}
-          className="bg-white/10 border border-cyan-500/40 text-cyan-300 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500/70 shadow-lg hover:scale-105 transition-transform"
-        >
-          <option value="all">All Months</option>
-          {MONTHS.map((m) => (
-            <option key={m.value} value={m.value}>
-              {m.label}
-            </option>
-          ))}
-        </select>
-
-        <select
-          value={year}
-          onChange={(e) => setYear(Number(e.target.value))}
-          className="bg-white/10 border border-cyan-500/40 text-cyan-300 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500/70 shadow-lg hover:scale-105 transition-transform"
-        >
-          {Array.from({ length: 6 }, (_, i) => {
-            const y = 2022 + i;
-            return (
-              <option key={y} value={y}>
-                {y}
+        {/* Filters */}
+        <div className="flex gap-4 mb-8 justify-center">
+          <select
+            value={month}
+            onChange={(e) => setMonth(e.target.value)}
+            className="bg-black/40 border border-cyan-500/40 text-cyan-300 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500/70 shadow-lg hover:scale-105 transition-transform"
+          >
+            {MONTHS.map((m) => (
+              <option key={m.value} value={m.value}>
+                {m.label}
               </option>
-            );
-          })}
-        </select>
-      </div>
+            ))}
+            <option value="all">All Months</option>
+          </select>
 
-      {loading && <p className="text-gray-400 animate-pulse">Loading...</p>}
-      {!loading && data && (
-        <>
-          {/* KPI Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            {[{
-              title: "Total Revenue",
-              value: `₹${data.totalRevenue.toFixed(2)}`,
-              color: "text-cyan-400",
-              prev: data.prevMonth?.totalRevenue,
-              curr: data.totalRevenue
-            },{
-              title: "Revenue Sources",
-              value: data.totalSources,
-              color: "text-violet-400"
-            },{
-              title: "Total Expenses",
-              value: `₹${data.totalExpenses.toFixed(2)}`,
-              color: "text-pink-400",
-              prev: data.prevMonth?.totalExpenses,
-              curr: data.totalExpenses
-            },{
-              title: "Savings",
-              value: `₹${data.savings.toFixed(2)}`,
-              color: "text-teal-400",
-              prev: data.prevMonth?.savings,
-              curr: data.savings
-            }].map((kpi, i) => (
-              <Card
-                key={i}
-                className="bg-white/5 backdrop-blur-md shadow-xl border border-white/10 hover:scale-105 hover:border-cyan-500/40 transition-transform duration-300 rounded-2xl"
-              >
+          <select
+            value={year}
+            onChange={(e) => setYear(Number(e.target.value))}
+            className="bg-black/40 border border-cyan-500/40 text-cyan-300 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500/70 shadow-lg hover:scale-105 transition-transform"
+          >
+            {Array.from({ length: 6 }, (_, i) => {
+              const y = 2022 + i;
+              return (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              );
+            })}
+          </select>
+        </div>
+
+        {loading && (
+          <p className="text-gray-400 animate-pulse text-center">Loading...</p>
+        )}
+
+        {!loading && data && (
+          <>
+            {/* Metrics Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+              {[
+                {
+                  title: "Total Revenue",
+                  value: `₹${(data.totalRevenue ?? 0).toFixed(2)}`,
+                  change: percentageChange(
+                    data.totalRevenue ?? 0,
+                    data.prevMonth?.totalRevenue ?? 0
+                  ),
+                  trend:
+                    (data.prevMonth?.totalRevenue ?? 0) < (data.totalRevenue ?? 0)
+                      ? "up"
+                      : "down",
+                  icon: DollarSign,
+                  color: "text-green-400",
+                },
+                {
+                  title: "Revenue Sources",
+                  value: data.totalSources ?? 0,
+                  change: "N/A",
+                  trend: "up",
+                  icon: Users,
+                  color: "text-cyan-400",
+                },
+                {
+                  title: "Total Expenses",
+                  value: `₹${(data.totalExpenses ?? 0).toFixed(2)}`,
+                  change: percentageChange(
+                    data.totalExpenses ?? 0,
+                    data.prevMonth?.totalExpenses ?? 0
+                  ),
+                  trend:
+                    (data.prevMonth?.totalExpenses ?? 0) < (data.totalExpenses ?? 0)
+                      ? "up"
+                      : "down",
+                  icon: CreditCard,
+                  color: "text-purple-400",
+                },
+                {
+                  title: "Savings",
+                  value: `₹${(data.savings ?? 0).toFixed(2)}`,
+                  change: percentageChange(
+                    data.savings ?? 0,
+                    data.prevMonth?.savings ?? 0
+                  ),
+                  trend:
+                    (data.prevMonth?.savings ?? 0) < (data.savings ?? 0)
+                      ? "up"
+                      : "down",
+                  icon: Activity,
+                  color: "text-orange-400",
+                },
+              ].map((metric, i) => (
+                <Card
+                  key={i}
+                  className="bg-black/40 backdrop-blur-md border border-cyan-500/20 hover:border-cyan-500/40 transition-all duration-300"
+                >
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-gray-400 text-sm mb-1">
+                          {metric.title}
+                        </p>
+                        <p className="text-2xl text-white mb-2">
+                          {metric.value}
+                        </p>
+                        <div className="flex items-center">
+                          {metric.trend === "up" ? (
+                            <TrendingUp
+                              className="text-green-400 mr-1"
+                              size={16}
+                            />
+                          ) : (
+                            <TrendingDown
+                              className="text-red-400 mr-1"
+                              size={16}
+                            />
+                          )}
+                          <span
+                            className={
+                              metric.trend === "up"
+                                ? "text-green-400"
+                                : "text-red-400"
+                            }
+                          >
+                            {metric.change}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="p-3 rounded-lg bg-gradient-to-br from-cyan-500/20 to-purple-500/20">
+                        <metric.icon className={metric.color} size={24} />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Charts */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+              {/* ✅ Expense Trend */}
+              <Card className="bg-black/40 backdrop-blur-md border border-cyan-500/20">
+      <CardHeader>
+        <CardTitle className="text-white flex justify-between items-center">
+          Expense Trend
+          <div className="space-x-2">
+            <button
+              disabled={!hasPrev}
+              onClick={() => setCurrentPage((p) => p - 1)}
+              className="px-2 py-1 bg-gray-700 text-white rounded disabled:opacity-40"
+            >
+              Prev
+            </button>
+            <button
+              disabled={!hasNext}
+              onClick={() => setCurrentPage((p) => p + 1)}
+              className="px-2 py-1 bg-gray-700 text-white rounded disabled:opacity-40"
+            >
+              Next
+            </button>
+          </div>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {paginatedData.length > 0 ? (
+          <ResponsiveContainer width="100%" height={300}>
+            <AreaChart data={paginatedData}>
+              <defs>
+                <linearGradient id="purpleGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.8} />
+                  <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+
+              <CartesianGrid stroke="#374151" />
+              <XAxis dataKey="name" stroke="#9ca3af" />
+              <YAxis stroke="#9ca3af" />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "rgba(0, 0, 0, 0.8)",
+                  border: "1px solid #8b5cf6",
+                  borderRadius: "8px",
+                  color: "white",
+                }}
+              />
+              <Area
+                type="monotone"
+                dataKey="total"
+                stroke="none"
+                fill="url(#purpleGradient)"
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="flex items-center justify-center h-64 text-gray-500">
+            No expense data
+          </div>
+        )}
+      </CardContent>
+    </Card>
+
+              {/* Expense Breakdown */}
+              <Card className="bg-black/40 backdrop-blur-md border border-cyan-500/20">
                 <CardHeader>
-                  <CardTitle className="text-gray-300">{kpi.title}</CardTitle>
+                  <CardTitle className="text-white">Expense Breakdown</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className={`text-2xl font-bold ${kpi.color}`}>{kpi.value}</p>
-                  {kpi.prev !== undefined && (
-                    <p className="text-sm text-gray-400">
-                      {percentageChange(kpi.curr!, kpi.prev)}
-                    </p>
+                  {data.expenseCategories?.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={300}>
+                      <PieChart>
+                        <Pie
+                          data={data.expenseCategories}
+                          dataKey="total"
+                          nameKey="category"
+                          outerRadius={100}
+                          label={({ name, percent }: { name: string; percent: number }) =>
+                            `${name} ${(percent * 100).toFixed(0)}%`
+                          }
+                        >
+                          {data.expenseCategories.map((_, index) => (
+                            <Cell
+                              key={`cell-${index}`}
+                              fill={COLORS[index % COLORS.length]}
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: "rgba(0, 0, 0, 0.8)",
+                            border: "1px solid #06b6d4",
+                            borderRadius: "8px",
+                            color: "white",
+                          }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="flex items-center justify-center h-64 text-gray-500">
+                      No expense data
+                    </div>
                   )}
                 </CardContent>
               </Card>
-            ))}
-          </div>
+            </div>
 
-          {/* Charts */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-            {/* Line Chart */}
-            <Card className="bg-white/5 backdrop-blur-md shadow-xl border border-white/10 rounded-2xl">
-              <CardHeader>
-                <CardTitle className="text-cyan-300">Cashflow Trend</CardTitle>
-              </CardHeader>
-              <CardContent className="h-72">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#222" />
-                    <XAxis dataKey="name" stroke="#aaa" />
-                    <YAxis stroke="#aaa" />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "#0f172a",
-                        border: "1px solid #334155",
-                        borderRadius: "8px",
-                        color: "#fff",
-                      }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="total"
-                      stroke="#00E6A8"
-                      strokeWidth={3}
-                      dot={{ r: 4, fill: "#00CFFF" }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-
-            {/* Pie Chart + Table */}
-            <Card className="bg-white/5 backdrop-blur-md shadow-xl border border-white/10 rounded-2xl">
-              <CardHeader>
-                <CardTitle className="text-violet-300">Expense Categories</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {data.expenseCategories?.length > 0 ? (
-                  <div className="flex flex-col items-center">
-                    <div className="h-64 w-full">
-                      <ResponsiveContainer>
-                        <PieChart>
-                          <Pie
-                            data={data.expenseCategories}
-                            dataKey="total"
-                            nameKey="category"
-                            outerRadius={100}
-                            label
-                          >
-                            {data.expenseCategories.map((_, index) => (
-                              <Cell
-                                key={`cell-${index}`}
-                                fill={COLORS[index % COLORS.length]}
-                              />
-                            ))}
-                          </Pie>
-                          <Tooltip
-                            contentStyle={{
-                              backgroundColor: "#0f172a",
-                              border: "1px solid #334155",
-                              borderRadius: "8px",
-                              color: "#fff",
-                            }}
-                          />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </div>
-
-                    <div className="mt-4 w-full">
-                      <h3 className="font-semibold mb-2 text-cyan-300">
-                        Top 5 Categories
-                      </h3>
-                      <table className="w-full text-sm border border-white/10 rounded-lg overflow-hidden">
-                        <thead>
-                          <tr className="bg-white/10 text-gray-300">
-                            <th className="text-left p-2">Category</th>
-                            <th className="text-right p-2">Amount (₹)</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {data.expenseCategories
-                            .sort((a, b) => b.total - a.total)
-                            .slice(0, 5)
-                            .map((cat, i) => (
-                              <tr
-                                key={i}
-                                className="border-t border-white/10 hover:bg-white/10 transition-colors"
-                              >
-                                <td className="p-2">{cat.category}</td>
-                                <td className="p-2 text-right">
-                                  {cat.total.toFixed(2)}
-                                </td>
-                              </tr>
-                            ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center h-64 text-gray-500">
-                    No expense data
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* AI Insight */}
-          {data.aiInsight && (
-            <Card className="mt-6 bg-white/5 backdrop-blur-md shadow-xl border-l-4 border-cyan-500/60 rounded-2xl">
-              <CardHeader>
-                <CardTitle className="text-cyan-400">AI Insight</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-300 italic">{data.aiInsight}</p>
-              </CardContent>
-            </Card>
-          )}
-        </>
-      )}
-    </div>
+            {/* AI Insight */}
+            {data.aiInsight && (
+              <Card className="mt-6 bg-black/40 backdrop-blur-md border-l-4 border-cyan-500/60 rounded-2xl">
+                <CardHeader>
+                  <CardTitle className="text-cyan-400">AI Insight</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-300 italic">{data.aiInsight}</p>
+                </CardContent>
+              </Card>
+            )}
+          </>
+        )}
+      </div>
+    </section>
   );
-}
+} 

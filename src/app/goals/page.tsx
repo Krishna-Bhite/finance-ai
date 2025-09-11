@@ -1,96 +1,128 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import Input from "@/components/ui/input";
-import Button from "@/components/ui/button";
+import { useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../../components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../../components/ui/table";
+import { Badge } from "../../components/ui/badge";
+import Input from "../../components/ui/input";
+import Button from "../../components/ui/button";
 
+// Types
 interface Goal {
   id: string;
   name: string;
-  description: string | null;
-  neededMoney: number;
-  currentMoney: number;
+  targetAmount: number;
+  currentAmount: number;
   deadline: string;
+  status: string;
 }
+
+// Status options
+const statuses = ["All", "In Progress", "Completed", "On Hold"];
+
+// Badge Colors
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case "Completed":
+      return "bg-green-500/20 text-green-400 border-green-500/30";
+    case "In Progress":
+      return "bg-yellow-500/20 text-yellow-400 border-yellow-500/30";
+    case "On Hold":
+      return "bg-red-500/20 text-red-400 border-red-500/30";
+    default:
+      return "bg-gray-500/20 text-gray-400 border-gray-500/30";
+  }
+};
 
 export default function GoalsPage() {
   const [goals, setGoals] = useState<Goal[]>([]);
 
-  const getToday = () => new Date().toISOString().split("T")[0];
-
+  // Add form states
   const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [neededMoney, setNeededMoney] = useState("");
-  const [currentMoney, setCurrentMoney] = useState("0");
-  const [deadline, setDeadline] = useState(getToday());
+  const [targetAmount, setTargetAmount] = useState("");
+  const [currentAmount, setCurrentAmount] = useState("");
+  const [deadline, setDeadline] = useState(new Date().toISOString().split("T")[0]);
+  const [status, setStatus] = useState("In Progress");
   const [error, setError] = useState("");
 
+  // Edit states
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
-  const [editDescription, setEditDescription] = useState("");
-  const [editNeeded, setEditNeeded] = useState("");
-  const [editCurrent, setEditCurrent] = useState("");
+  const [editTargetAmount, setEditTargetAmount] = useState("");
+  const [editCurrentAmount, setEditCurrentAmount] = useState("");
   const [editDeadline, setEditDeadline] = useState("");
+  const [editStatus, setEditStatus] = useState("In Progress");
 
+  // Fetch
   async function fetchGoals() {
     const res = await fetch("/api/goals");
-    if (!res.ok) return;
     const data = await res.json();
-    setGoals(data.map((g: any) => ({ ...g, id: g.id })));
+    setGoals(data);
   }
 
   useEffect(() => {
     fetchGoals();
   }, []);
 
+  // Add
   async function addGoal() {
-    if (!name || !neededMoney || !deadline) {
-      setError("⚠ Please enter Name, Needed Money, and Deadline!");
+    if (!name || !targetAmount || !deadline) {
+      setError("⚠ Please enter Goal Name, Target Amount and Deadline!");
       return;
     }
     setError("");
 
-    const res = await fetch("/api/goals", {
+    await fetch("/api/goals", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         name,
-        description: description || null,
-        neededMoney: parseFloat(neededMoney),
-        currentMoney: parseFloat(currentMoney) || 0,
+        targetAmount: parseFloat(targetAmount),
+        currentAmount: parseFloat(currentAmount) || 0,
         deadline,
+        status,
       }),
     });
 
-    if (!res.ok) return;
-
     setName("");
-    setDescription("");
-    setNeededMoney("");
-    setCurrentMoney("0");
-    setDeadline(getToday());
+    setTargetAmount("");
+    setCurrentAmount("");
+    setDeadline(new Date().toISOString().split("T")[0]);
+    setStatus("In Progress");
     fetchGoals();
   }
 
+  // Delete
   async function deleteGoal(id: string) {
     await fetch(`/api/goals/${id}`, { method: "DELETE" });
     fetchGoals();
   }
 
+  // Edit
   function startEdit(goal: Goal) {
     setEditingId(goal.id);
     setEditName(goal.name);
-    setEditDescription(goal.description || "");
-    setEditNeeded(goal.neededMoney.toString());
-    setEditCurrent(goal.currentMoney.toString());
+    setEditTargetAmount(goal.targetAmount.toString());
+    setEditCurrentAmount(goal.currentAmount.toString());
     setEditDeadline(goal.deadline.split("T")[0]);
+    setEditStatus(goal.status);
   }
 
   async function saveEdit(id: string) {
-    if (!editName || !editNeeded || !editDeadline) {
-      setError("⚠ Please enter Name, Needed Money, and Deadline!");
+    if (!editName || !editTargetAmount || !editDeadline) {
+      setError("⚠ Please enter Goal Name, Target Amount and Deadline!");
       return;
     }
     setError("");
@@ -100,10 +132,10 @@ export default function GoalsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         name: editName,
-        description: editDescription || null,
-        neededMoney: parseFloat(editNeeded),
-        currentMoney: parseFloat(editCurrent) || 0,
+        targetAmount: parseFloat(editTargetAmount),
+        currentAmount: parseFloat(editCurrentAmount) || 0,
         deadline: editDeadline,
+        status: editStatus,
       }),
     });
 
@@ -112,85 +144,179 @@ export default function GoalsPage() {
   }
 
   return (
-    <main className="min-h-screen p-8 bg-gradient-to-br from-[#0f172a] via-[#1a103d] to-black text-gray-100">
-      {/* Add Goal Form */}
-      <Card className="mb-8 shadow-2xl border border-purple-500/30 bg-white/5 backdrop-blur-xl">
-        <CardHeader>
-          <CardTitle className="text-2xl font-bold bg-gradient-to-r from-fuchsia-400 to-purple-500 bg-clip-text text-transparent">
-            🎯 Add Goal
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {error && <p className="text-red-400 text-sm">{error}</p>}
+    <section
+      id="goals"
+      className="py-20 px-4 sm:px-6 lg:px-8 relative min-h-screen"
+    >
+      <div className="max-w-7xl mx-auto">
+        {/* Title */}
+        <div className="text-center mb-16">
+          <h2 className="text-3xl md:text-4xl mb-4 bg-gradient-to-r from-cyan-400 to-purple-600 bg-clip-text text-transparent">
+            Goals Management
+          </h2>
+          <p className="text-gray-400 text-lg max-w-2xl mx-auto">
+            Define, track and achieve your financial goals
+          </p>
+        </div>
 
-          <Input type="text" placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
-          <Input type="text" placeholder="Description (optional)" value={description} onChange={(e) => setDescription(e.target.value)} />
-          <Input type="number" placeholder="Needed Money" value={neededMoney} onChange={(e) => setNeededMoney(e.target.value)} />
-          <Input type="number" placeholder="Current Money (default 0)" value={currentMoney} onChange={(e) => setCurrentMoney(e.target.value)} />
-          <Input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
-
-          <Button onClick={addGoal} className="w-full bg-gradient-to-r from-fuchsia-500 to-purple-600 hover:opacity-90">
-            Add Goal
-          </Button>
-        </CardContent>
-      </Card>
-
-      <h2 className="text-2xl font-semibold mb-6 bg-gradient-to-r from-purple-400 to-fuchsia-500 bg-clip-text text-transparent">
-        📌 Your Goals
-      </h2>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <AnimatePresence>
-          {goals.map((goal) => (
-            <motion.div
-              key={goal.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
+        {/* Add Goal Form */}
+        <Card className="mb-12 bg-black/40 backdrop-blur-md border border-cyan-500/20">
+          <CardHeader>
+            <CardTitle className="text-xl text-white">🎯 Add New Goal</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {error && <p className="text-red-400 text-sm">{error}</p>}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                type="text"
+                placeholder="Goal Name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+              <Input
+                type="number"
+                placeholder="Target Amount"
+                value={targetAmount}
+                onChange={(e) => setTargetAmount(e.target.value)}
+              />
+              <Input
+                type="number"
+                placeholder="Current Amount"
+                value={currentAmount}
+                onChange={(e) => setCurrentAmount(e.target.value)}
+              />
+              <Input
+                type="date"
+                value={deadline}
+                onChange={(e) => setDeadline(e.target.value)}
+              />
+            </div>
+            <Button
+              onClick={addGoal}
+              className="w-full bg-gradient-to-r from-cyan-500 to-purple-600 text-white"
             >
-              <Card className="shadow-lg border border-purple-500/30 bg-white/5 backdrop-blur-lg hover:scale-[1.02] transition-transform">
-                <CardContent className="p-5 flex justify-between items-start">
-                  {editingId === goal.id ? (
-                    <div className="flex-1 space-y-3">
-                      <Input type="text" value={editName} onChange={(e) => setEditName(e.target.value)} />
-                      <Input type="text" value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
-                      <Input type="number" value={editNeeded} onChange={(e) => setEditNeeded(e.target.value)} />
-                      <Input type="number" value={editCurrent} onChange={(e) => setEditCurrent(e.target.value)} />
-                      <Input type="date" value={editDeadline} onChange={(e) => setEditDeadline(e.target.value)} />
-                      <div className="flex gap-3">
-                        <Button onClick={() => saveEdit(goal.id)} className="bg-green-600 text-white">Save</Button>
-                        <Button onClick={() => setEditingId(null)} variant="secondary">Cancel</Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex-1 space-y-2">
-                      <p className="text-xl font-semibold text-purple-300">🎯 {goal.name}</p>
-                      <p className="text-sm text-gray-400">{goal.description || "No description"}</p>
-                      <p className="text-pink-400 font-bold">Needed: ₹{goal.neededMoney}</p>
-                      <p className="text-green-400 font-bold">Current: ₹{goal.currentMoney}</p>
-                      <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
-                        <div
-                          className="bg-gradient-to-r from-fuchsia-500 to-purple-600 h-2"
-                          style={{ width: `${Math.min((goal.currentMoney / goal.neededMoney) * 100, 100)}%` }}
-                        />
-                      </div>
-                      <p className="text-xs text-gray-500">Deadline: {new Date(goal.deadline).toLocaleDateString()}</p>
-                    </div>
-                  )}
+              Add Goal
+            </Button>
+          </CardContent>
+        </Card>
 
-                  <div className="flex flex-col gap-2 ml-4">
-                    {editingId !== goal.id && (
-                      <Button onClick={() => startEdit(goal)} className="bg-yellow-400 text-black">Edit</Button>
-                    )}
-                    <Button onClick={() => deleteGoal(goal.id)} className="bg-red-600 hover:bg-red-500">Delete</Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
-        </AnimatePresence>
+        {/* Table */}
+        <Card className="mb-5 bg-black/40 backdrop-blur-md border border-cyan-500/20">
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-gray-700">
+                    <TableHead className="text-gray-300">Name</TableHead>
+                    <TableHead className="text-gray-300">Target</TableHead>
+                    <TableHead className="text-gray-300">Current</TableHead>
+                    <TableHead className="text-gray-300">Deadline</TableHead>
+                    <TableHead className="text-gray-300">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {goals.map((goal) => (
+                    <TableRow
+                      key={goal.id}
+                      className="border-gray-700 hover:bg-cyan-500/5"
+                    >
+                      {editingId === goal.id ? (
+                        <>
+                          <TableCell>
+                            <Input
+                              value={editName}
+                              onChange={(e) => setEditName(e.target.value)}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              type="number"
+                              value={editTargetAmount}
+                              onChange={(e) =>
+                                setEditTargetAmount(e.target.value)
+                              }
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              type="number"
+                              value={editCurrentAmount}
+                              onChange={(e) =>
+                                setEditCurrentAmount(e.target.value)
+                              }
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              type="date"
+                              value={editDeadline}
+                              onChange={(e) => setEditDeadline(e.target.value)}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              value={editStatus}
+                              onChange={(e) => setEditStatus(e.target.value)}
+                            />
+                          </TableCell>
+                          <TableCell className="flex gap-2">
+                            <Button
+                              onClick={() => saveEdit(goal.id)}
+                              className="bg-green-600"
+                            >
+                              Save
+                            </Button>
+                            <Button
+                              onClick={() => setEditingId(null)}
+                              className="bg-gray-600"
+                            >
+                              Cancel
+                            </Button>
+                          </TableCell>
+                        </>
+                      ) : (
+                        <>
+                          <TableCell className="text-white">
+                            {goal.name}
+                          </TableCell>
+                          <TableCell className="text-pink-400 font-semibold">
+                            ₹{goal.targetAmount}
+                          </TableCell>
+                          <TableCell className="text-cyan-400 font-semibold">
+                            ₹{goal.currentAmount}
+                          </TableCell>
+                          <TableCell className="text-gray-300">
+                            {new Date(goal.deadline).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell className="flex gap-2">
+                            <Button
+                              onClick={() => startEdit(goal)}
+                              className="bg-yellow-400 text-black"
+                            >
+                              Edit
+                            </Button>
+                            <Button
+                              onClick={() => deleteGoal(goal.id)}
+                              className="bg-red-600 text-white"
+                            >
+                              Delete
+                            </Button>
+                          </TableCell>
+                        </>
+                      )}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            {goals.length === 0 && (
+              <div className="text-center py-8 text-gray-400">
+                No goals found.
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
-    </main>
+    </section>
   );
 }
