@@ -3,10 +3,6 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/options";
 import prisma from "@/lib/prisma";
 
-type RouteParams = {
-  params: { id: string };
-};
-
 // 🔹 Recalculate total
 async function recalcRevenue(revenueId: string) {
   const sources = await prisma.revenueSource.findMany({ where: { revenueId } });
@@ -20,13 +16,16 @@ async function recalcRevenue(revenueId: string) {
 }
 
 // ✅ PATCH (update revenue, update/add source)
-export async function PATCH(req: Request, { params }: RouteParams) {
+export async function PATCH(
+  req: Request,
+  context: any
+) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { id } = params;
+  const { id } = context.params;
   const { searchParams } = new URL(req.url);
   const type = searchParams.get("type");
   const action = searchParams.get("action");
@@ -94,7 +93,10 @@ export async function PATCH(req: Request, { params }: RouteParams) {
       return NextResponse.json(await recalcRevenue(id));
     }
 
-    return NextResponse.json({ error: "Invalid PATCH request" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid PATCH request" },
+      { status: 400 }
+    );
   } catch (err) {
     console.error("PATCH error:", err);
     return NextResponse.json({ error: "Failed to update" }, { status: 500 });
@@ -102,13 +104,16 @@ export async function PATCH(req: Request, { params }: RouteParams) {
 }
 
 // ✅ DELETE (revenue OR source)
-export async function DELETE(req: Request, { params }: RouteParams) {
+export async function DELETE(
+  req: Request,
+  context: any
+) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { id } = params;
+  const { id } = context.params;
   const { searchParams } = new URL(req.url);
   const type = searchParams.get("type");
 
@@ -123,7 +128,10 @@ export async function DELETE(req: Request, { params }: RouteParams) {
       return NextResponse.json(await recalcRevenue(source.revenueId));
     }
 
-    return NextResponse.json({ error: "Invalid type for DELETE" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid type for DELETE" },
+      { status: 400 }
+    );
   } catch (err) {
     console.error("DELETE error:", err);
     return NextResponse.json({ error: "Failed to delete" }, { status: 500 });

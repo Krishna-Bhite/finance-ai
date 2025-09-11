@@ -13,14 +13,14 @@ interface ExpenseInput {
 // ✅ PATCH (update expense)
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } }
+  context: any
 ) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { id } = params;
+  const { id } = context.params;
   const body: ExpenseInput = await req.json();
 
   const data: any = {};
@@ -44,14 +44,14 @@ export async function PATCH(
 // ✅ DELETE (remove expense)
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } }
+  context: any
 ) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { id } = params;
+  const { id } = context.params;
 
   await prisma.expense.delete({
     where: { id },

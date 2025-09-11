@@ -3,15 +3,17 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/options";
 import prisma from "@/lib/prisma";
 
-type RouteParams = { params: { id: string } };
-
 // PATCH update goal
-export async function PATCH(req: Request, { params }: RouteParams) {
+export async function PATCH(
+  req: Request,
+  context: any
+) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const { params } = context;
   const body = await req.json();
 
   // Verify ownership
@@ -41,11 +43,16 @@ export async function PATCH(req: Request, { params }: RouteParams) {
 }
 
 // DELETE goal
-export async function DELETE(_: Request, { params }: RouteParams) {
+export async function DELETE(
+  _: Request,
+  context: any
+) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const { params } = context;
 
   const goal = await prisma.goal.findUnique({
     where: { id: params.id },
