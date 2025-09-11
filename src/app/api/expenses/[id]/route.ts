@@ -3,12 +3,6 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/options";
 import prisma from "@/lib/prisma";
 
-type RouteParams = {
-  params: {
-    id: string;
-  };
-};
-
 interface ExpenseInput {
   amount?: number;
   category?: string;
@@ -17,7 +11,10 @@ interface ExpenseInput {
 }
 
 // ✅ PATCH (update expense)
-export async function PATCH(req: Request, { params }: RouteParams) {
+export async function PATCH(
+  req: Request,
+  { params }: { params: { id: string } }
+) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -45,7 +42,10 @@ export async function PATCH(req: Request, { params }: RouteParams) {
 }
 
 // ✅ DELETE (remove expense)
-export async function DELETE(req: Request, { params }: RouteParams) {
+export async function DELETE(
+  req: Request,
+  { params }: { params: { id: string } }
+) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
