@@ -1,16 +1,19 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/options"; // safer import
+import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import prisma from "@/lib/prisma";
 
-export const runtime = "nodejs"; // ⬅️ IMPORTANT for Prisma on Vercel
+export const runtime = "nodejs";
 
 // GET /api/revenues → fetch all revenues with sources
 export async function GET() {
   try {
     const revenues = await prisma.revenue.findMany({
       include: { sources: true },
-      orderBy:  [{ year: "desc" }, { month: "desc" }] ,
+      orderBy: [
+        { year: "desc" },
+        { month: "desc" }
+      ],
     });
     return NextResponse.json(Array.isArray(revenues) ? revenues : []);
   } catch (err) {
@@ -23,7 +26,6 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
-
     if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -39,18 +41,20 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { month, year, sources } = body;
 
-    if (!month || !year) {
+    if (!month || !year || !sources?.length) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "Missing required fields or sources" },
         { status: 400 }
       );
     }
 
+    // Find existing revenue for user/month/year
     let revenue = await prisma.revenue.findFirst({
       where: { userId: user.id, month, year },
     });
 
     if (revenue) {
+      // Update existing sources or create new ones
       for (const s of sources) {
         if (s.id) {
           await prisma.revenueSource.update({
@@ -85,6 +89,7 @@ export async function POST(req: Request) {
       });
     }
 
+    // Calculate total after updates
     const updatedSources = await prisma.revenueSource.findMany({
       where: { revenueId: revenue.id },
     });
