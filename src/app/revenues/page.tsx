@@ -156,7 +156,7 @@ export default function RevenuesPage() {
                 <SelectTrigger className="bg-black/40 border-green-400/30 text-green-300">
                   <SelectValue placeholder="Month" />
                 </SelectTrigger>
-                <SelectContent className="bg-black/90 border-green-400/30">
+                <SelectContent className="bg-black/90 border-green-400/30 text-green-300" >
                   {monthNames.map((name, idx) => (
                     <SelectItem key={idx + 1} value={(idx + 1).toString()}>
                       {name}
