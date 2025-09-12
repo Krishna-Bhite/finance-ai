@@ -95,7 +95,10 @@ export default function DashboardPage() {
   const loadAnalytics = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/analytics?month=${month}&year=${year}`);
+      // ✅ Ensure API path works in Vercel (absolute path fix)
+      const res = await fetch(`/api/analytics?month=${month}&year=${year}`, {
+        cache: "no-store",
+      });
       if (!res.ok) {
         const txt = await res.text();
         console.error("analytics error", txt);
@@ -126,12 +129,14 @@ export default function DashboardPage() {
   const filteredCategories =
     selectedCategory === "all"
       ? data?.expenseCategories ?? []
-      : data?.expenseCategories.filter((c) => c.category === selectedCategory) ?? [];
+      : data?.expenseCategories.filter((c) => c.category === selectedCategory) ??
+        [];
 
   const selectedTotal =
     selectedCategory === "all"
       ? data?.totalExpenses ?? 0
-      : data?.expenseCategories.find((c) => c.category === selectedCategory)?.total ?? 0;
+      : data?.expenseCategories.find((c) => c.category === selectedCategory)
+          ?.total ?? 0;
 
   return (
     <section id="dashboard" className="py-20 px-4 sm:px-6 lg:px-8 relative">
@@ -202,7 +207,8 @@ export default function DashboardPage() {
                     data.prevMonth?.totalRevenue ?? 0
                   ),
                   trend:
-                    (data.prevMonth?.totalRevenue ?? 0) < (data.totalRevenue ?? 0)
+                    (data.prevMonth?.totalRevenue ?? 0) <
+                    (data.totalRevenue ?? 0)
                       ? "up"
                       : "down",
                   icon: DollarSign,
@@ -224,7 +230,8 @@ export default function DashboardPage() {
                     data.prevMonth?.totalExpenses ?? 0
                   ),
                   trend:
-                    (data.prevMonth?.totalExpenses ?? 0) < (data.totalExpenses ?? 0)
+                    (data.prevMonth?.totalExpenses ?? 0) <
+                    (data.totalExpenses ?? 0)
                       ? "up"
                       : "down",
                   icon: CreditCard,
