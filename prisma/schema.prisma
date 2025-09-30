@@ -83,7 +83,7 @@ model Revenue {
   year       Int      // separate years
   total      Float    // total revenue for that month
   sources    RevenueSource[]
-  createdAt  DateTime @default(now())
+  
 
   @@unique([userId, month, year], name: "userId_month_year")  // ✅ only 1 revenue per user per month/year
 }

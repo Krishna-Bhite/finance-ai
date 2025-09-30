@@ -1,14 +1,19 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "../auth/[...nextauth]/options";
+import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import prisma from "@/lib/prisma";
+
+export const runtime = "nodejs";
 
 // GET /api/revenues → fetch all revenues with sources
 export async function GET() {
   try {
     const revenues = await prisma.revenue.findMany({
       include: { sources: true },
-      orderBy: { createdAt: "desc" },
+      orderBy: [
+        { year: "desc" },
+        { month: "desc" }
+      ],
     });
     return NextResponse.json(Array.isArray(revenues) ? revenues : []);
   } catch (err) {
@@ -21,7 +26,6 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
-
     if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -37,20 +41,20 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { month, year, sources } = body;
 
-    if (!month || !year) {
+    if (!month || !year || !sources?.length) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "Missing required fields or sources" },
         { status: 400 }
       );
     }
 
-    // Find existing revenue for this user/month/year
+    // Find existing revenue for user/month/year
     let revenue = await prisma.revenue.findFirst({
       where: { userId: user.id, month, year },
     });
 
     if (revenue) {
-      // Revenue exists → update sources
+      // Update existing sources or create new ones
       for (const s of sources) {
         if (s.id) {
           await prisma.revenueSource.update({
@@ -68,13 +72,12 @@ export async function POST(req: Request) {
         }
       }
     } else {
-      // Revenue doesn't exist → create new with sources
       revenue = await prisma.revenue.create({
         data: {
           userId: user.id,
           month,
           year,
-          total: 0, // will update after sources
+          total: 0,
           sources: {
             create: sources.map((s: any) => ({
               name: s.name,
@@ -86,14 +89,11 @@ export async function POST(req: Request) {
       });
     }
 
-    // Recalculate total
+    // Calculate total after updates
     const updatedSources = await prisma.revenueSource.findMany({
       where: { revenueId: revenue.id },
     });
-    const total = updatedSources.reduce(
-      (sum, s) => sum + (s.amount || 0),
-      0
-    );
+    const total = updatedSources.reduce((sum, s) => sum + (s.amount || 0), 0);
 
     revenue = await prisma.revenue.update({
       where: { id: revenue.id },
